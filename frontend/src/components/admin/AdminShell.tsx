@@ -11,6 +11,7 @@ const navigation: Array<{ href: string; label: string; roles?: Array<AdminIdenti
   { href: "/admin", label: "Dashboard" },
   // { href: "/admin/orders", label: "Orders" },
   { href: "/admin/products", label: "Products" },
+  { href: "/admin/build-gift", label: "Build-A-Gift" },
   { href: "/admin/bridge-pages", label: "Bridge Pages" },
   { href: "/admin/stories", label: "Stories" },
   { href: "/admin/articles", label: "Articles" },

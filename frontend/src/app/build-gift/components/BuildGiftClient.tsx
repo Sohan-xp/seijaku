@@ -96,77 +96,17 @@ function formatPrice(amount: number) {
 }
 
 function isProductForStep(product: ProductView, stepKey: GiftStepKey): boolean {
-    if (product.bridgeCategory === stepKey) {
-        return true;
+    if (product.buildGift?.enabled) {
+        return product.buildGift.section === stepKey;
     }
-
-    const typeStr = (product.type || "").toLowerCase();
-    const materialStr = (product.material || "").toLowerCase();
-    const slugStr = (product.slug || "").toLowerCase();
-    const titleStr = (product.title || "").toLowerCase();
-    const descStr = (product.shortDescription || "").toLowerCase();
-    const allText = `${typeStr} ${materialStr} ${slugStr} ${titleStr} ${descStr}`;
-
-    switch (stepKey) {
-        case "scarves-and-squares":
-            return (
-                typeStr.includes("scarf") ||
-                typeStr.includes("square") ||
-                slugStr.includes("scarf") ||
-                slugStr.includes("square") ||
-                slugStr.includes("modal-silk") ||
-                materialStr.includes("textile")
-            );
-
-        case "perfumes":
-            if (
-                slugStr.includes("diffuser") ||
-                typeStr.includes("diffuser") ||
-                typeStr.includes("wax melt")
-            ) {
-                return false;
-            }
-            return (
-                typeStr.includes("perfume") ||
-                typeStr.includes("fragrance") ||
-                slugStr.includes("perfume") ||
-                slugStr.includes("trilogy") ||
-                slugStr.includes("textile-oil") ||
-                slugStr.includes("breath-of-pines") ||
-                slugStr.includes("summer-held-close") ||
-                slugStr.includes("morning-desk") ||
-                materialStr.includes("botanical fragrance")
-            );
-
-        case "dokra-ornaments":
-            return (
-                typeStr.includes("dokra") ||
-                typeStr.includes("ornament") ||
-                materialStr.includes("dokra") ||
-                slugStr.includes("dokra") ||
-                slugStr.includes("brooch") ||
-                slugStr.includes("handfan") ||
-                slugStr.includes("bell-brooch") ||
-                slugStr.includes("conch-brooch") ||
-                allText.includes("dokra")
-            );
-
-        case "diffusers":
-            return (
-                typeStr.includes("diffuser") ||
-                typeStr.includes("wax melt") ||
-                slugStr.includes("diffuser") ||
-                slugStr.includes("wax-melt") ||
-                slugStr.includes("vessel") ||
-                slugStr.includes("room-stone") ||
-                slugStr.includes("stone-oil")
-            );
+    if (product.bridgeCategory) {
+        return product.bridgeCategory === stepKey;
     }
+    return false;
 }
 
 function productsForStep(products: ProductView[], step: GiftStepKey): ProductView[] {
-    const matches = products.filter((product) => isProductForStep(product, step));
-    return matches.length > 0 ? matches : products;
+    return products.filter((product) => isProductForStep(product, step));
 }
 
 function Stepper({

@@ -98,6 +98,16 @@ function buildAdvancedState(product: ProductSummary | null) {
   };
 }
 
+function buildBuildGiftState(product: ProductSummary | null) {
+  const meta = (product?.metadata?.buildGift ?? product?.metadata?.build_gift) as
+    | { enabled?: boolean; section?: string }
+    | undefined;
+  return {
+    enabled: Boolean(meta?.enabled),
+    section: meta?.section || "scarves-and-squares",
+  };
+}
+
 function buildMediaState(product: ProductSummary | null): {
   primaryImageId: string;
   items: GalleryItem[];
@@ -151,6 +161,7 @@ export default function ProductEditor({
   // preserve behavior (e.g. staying on the same route after save + refresh).
   const [core, setCore] = useState(buildCoreState(product));
   const [advanced, setAdvanced] = useState(buildAdvancedState(product));
+  const [buildGift, setBuildGift] = useState(buildBuildGiftState(product));
   const [mediaState, setMediaState] = useState(buildMediaState(product));
   const [categoryAssignments, setCategoryAssignments] = useState(buildAssignmentState(product?.categories ?? []));
   const [collectionAssignments, setCollectionAssignments] = useState(buildAssignmentState(product?.collections ?? []));
@@ -175,6 +186,7 @@ export default function ProductEditor({
   useEffect(() => {
     setCore(buildCoreState(product));
     setAdvanced(buildAdvancedState(product));
+    setBuildGift(buildBuildGiftState(product));
     setMediaState(buildMediaState(product));
     setCategoryAssignments(buildAssignmentState(product?.categories ?? []));
     setCollectionAssignments(buildAssignmentState(product?.collections ?? []));
@@ -230,11 +242,7 @@ export default function ProductEditor({
       setError(null);
       setFieldErrors({});
 
-      // Empty textarea → omit `metadata` from the payload entirely (treated
-      // as "no change" server-side). Sending an explicit `null` would 400
-      // because the backend's `optionalJsonRecord` schema rejects null —
-      // this used to block all saves on records with NULL metadataJson.
-      let metadata: Record<string, unknown> | undefined;
+      let metadata: Record<string, unknown> = {};
       if (advanced.metadata.trim()) {
         try {
           metadata = JSON.parse(advanced.metadata) as Record<string, unknown>;
@@ -244,6 +252,11 @@ export default function ProductEditor({
           return;
         }
       }
+
+      metadata.buildGift = {
+        enabled: buildGift.enabled,
+        section: buildGift.section,
+      };
 
       // Strip thousands-commas from the price input ("4,499" → 4499) so users
       // can type naturally without tripping the server's integer validation.
@@ -1086,6 +1099,49 @@ export default function ProductEditor({
               </p>
             </AdminCard>
           ) : null}
+
+          {/* Build-A-Gift Inclusion */}
+          <AdminCard>
+            <h2 className="text-[14px] font-medium uppercase tracking-[0.16em] text-[#6a5d50]">Build-A-Gift Page</h2>
+            <p className="mt-1 text-[12px] text-[#8a8075]">
+              Choose whether this product appears on the /build-gift builder and in which section.
+            </p>
+            <label className="mt-4 flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={buildGift.enabled}
+                onChange={(e) => setBuildGift((prev) => ({ ...prev, enabled: e.target.checked }))}
+                className="h-4 w-4 rounded border-[#d7cec1] text-[#2d2824] focus:ring-0"
+              />
+              <span className="text-[13px] font-medium text-[#2d2824]">Show in Build-A-Gift page</span>
+            </label>
+            {buildGift.enabled ? (
+              <div className="mt-3">
+                <AdminField label="Section in Gift Box">
+                  <select
+                    value={buildGift.section}
+                    onChange={(e) => setBuildGift((prev) => ({ ...prev, section: e.target.value }))}
+                    className={adminInputClassName}
+                  >
+                    <option value="scarves-and-squares">Scarves &amp; Squares</option>
+                    <option value="perfumes">Perfumes</option>
+                    <option value="dokra-ornaments">Dokra Ornaments</option>
+                    <option value="diffusers">Diffusers</option>
+                  </select>
+                </AdminField>
+              </div>
+            ) : null}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => persistCore()}
+                disabled={isPending}
+                className={adminButtonClassName}
+              >
+                {isPending ? "Saving..." : "Save gift setting"}
+              </button>
+            </div>
+          </AdminCard>
 
           {/* Assignments: categories / collections / bridge pages */}
           {isExistingProduct ? (

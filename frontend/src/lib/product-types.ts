@@ -1,4 +1,4 @@
-import { publicBackendJson } from "@/src/lib/backend";
+import { publicBackendJson, type PublicFetchOptions } from "@/src/lib/backend";
 import { cacheTags } from "@/src/lib/cache-tags";
 import type { ShopBridgeSlug } from "@/src/lib/shop-routes";
 import type { ShopItemType, ShopMaterial, ShopUseCase } from "@/src/lib/shop-taxonomy";
@@ -29,6 +29,11 @@ export type ProductView = {
   ctaLabel?: string;
   status?: string;
   releaseDate?: string | null;
+  metadata?: Record<string, unknown> | null;
+  buildGift?: {
+    enabled: boolean;
+    section: ShopBridgeSlug;
+  };
   // Per-product variant pickers (e.g. colour tone, size, blend).
   customizationOptions?: Array<{
     label: string;
@@ -105,6 +110,7 @@ export type BackendProduct = {
   media: BackendProductMedia[];
   options: BackendProductOption[];
   bridgePages: BackendProductBridgePageRef[];
+  metadata?: Record<string, unknown> | null;
 };
 
 const STATUS_DISPLAY: Record<BackendProductStatus, string> = {
@@ -145,6 +151,21 @@ export function normalizeBackendProduct(b: BackendProduct): ProductView | null {
   const image = b.primaryImage?.url ?? gallery[0] ?? PLACEHOLDER_IMAGE;
   const imageAlt = b.primaryImage?.altText ?? b.imageAlt ?? undefined;
 
+  const rawBuildGift = (b.metadata?.buildGift ?? b.metadata?.build_gift) as
+    | { enabled?: boolean; section?: string }
+    | undefined;
+
+  const buildGift = rawBuildGift?.enabled
+    ? {
+        enabled: true,
+        section: (rawBuildGift.section || b.bridgePages[0]?.slug || "scarves-and-squares") as ShopBridgeSlug,
+      }
+    : undefined;
+
+  const bridgeCategory = buildGift?.enabled && buildGift.section
+    ? buildGift.section
+    : ((b.bridgePages[0]?.slug ?? undefined) as ProductView["bridgeCategory"]);
+
   return {
     id: b.id,
     slug: b.slug,
@@ -156,7 +177,9 @@ export function normalizeBackendProduct(b: BackendProduct): ProductView | null {
     type: b.type as ProductView["type"],
     material: b.material as ProductView["material"],
     useCase: (b.useCase ?? undefined) as ProductView["useCase"],
-    bridgeCategory: (b.bridgePages[0]?.slug ?? undefined) as ProductView["bridgeCategory"],
+    bridgeCategory,
+    buildGift,
+    metadata: b.metadata ?? null,
     shortDescription: b.shortDescription ?? undefined,
     longDescription: b.longDescription ?? undefined,
     price: b.priceAmount,
@@ -193,10 +216,10 @@ export function normalizeBackendProducts(items: BackendProduct[]): ProductView[]
 // ProductView shape. /catalog/products already filters DRAFT server-side
 // (backend/src/routes/public.ts), so the draft filter inside the normalizer
 // is defensive.
-export async function fetchProducts(): Promise<ProductView[]> {
+export async function fetchProducts(options?: PublicFetchOptions): Promise<ProductView[]> {
   const { items } = await publicBackendJson<{ items: BackendProduct[] }>(
     "/catalog/products",
-    { tags: [cacheTags.products] },
+    { tags: [cacheTags.products], ...options },
   );
   return normalizeBackendProducts(items);
 }
