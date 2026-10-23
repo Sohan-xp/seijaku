@@ -80,18 +80,18 @@ export default function CompactProductCard({
                     {item.type}
                 </p>
 
-                <h2 className="mt-2 font-serif text-[21px] leading-[1.12] tracking-[-0.022em] text-[#1f1a16]">
+                <h2 className="mt-2 font-serif text-[18px] leading-[1.12] tracking-[-0.022em] text-[#1f1a16]">
                     {item.title}
                 </h2>
 
-                <p className="mt-2 line-clamp-2 min-h-[2.9rem] text-[13px] leading-[1.68] text-[#625a51]">
+                {/* <p className="mt-2 line-clamp-2 min-h-[2.9rem] text-[13px] leading-[1.68] text-[#625a51]">
                     {item.shortDescription || "Quietly composed Seijaku object."}
-                </p>
+                </p> */}
 
-                <div className="mt-4">
-                    <p className="text-[9px] uppercase tracking-[0.18em] text-[#8f7a65]">
+                <div className="mt-2">
+                    {/* <p className="text-[9px] uppercase tracking-[0.18em] text-[#8f7a65]">
                         Price
-                    </p>
+                    </p> */}
                     <p className="mt-1 text-[14px] text-[#2f2924]">
                         {item.priceLabel}
                     </p>
