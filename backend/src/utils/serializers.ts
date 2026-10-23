@@ -376,11 +376,13 @@ export function serializeOrderRequest(order: any) {
       quantity: item.quantity,
       unitPriceAmount: item.unitPriceAmount,
       variantSummary: item.variantSummary,
+      selectedOptionsJson: item.selectedOptionsJson ?? null,
       product: item.product
         ? {
             id: item.product.id,
             slug: item.product.slug,
             title: item.product.title,
+            image: item.product.primaryImage?.url ?? null,
           }
         : null,
     })),
