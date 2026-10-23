@@ -190,7 +190,7 @@ export default function PerfumesPageClient({ page, products }: PerfumesPageClien
             eyebrow="For Skin and Textiles"
             title="Fragrance that stays with what you wear"
             description="Oil-based blends that settle into fabric and move with you."
-            categoryLabel="Cloth"
+            categoryLabel="SKIN OR FABRIC OR BOTH"
             closingQuote="Scent does not announce. It settles."
             products={grouped.textiles}
             onViewDetails={updateQuery}

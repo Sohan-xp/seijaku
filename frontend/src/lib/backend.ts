@@ -54,12 +54,13 @@ export async function publicBackendJson<T>(
   path: string,
   { revalidate, tags, ...init }: PublicFetchOptions = {},
 ): Promise<T> {
-  const next: { revalidate: number; tags?: CacheTag[] } = {
-    revalidate: revalidate ?? DEFAULT_PUBLIC_REVALIDATE_SECONDS,
-  };
-  if (tags && tags.length > 0) {
+  const isNoStore = init.cache === "no-store" || revalidate === 0;
+  const next: { revalidate?: number; tags?: CacheTag[] } = isNoStore
+    ? {}
+    : { revalidate: revalidate ?? DEFAULT_PUBLIC_REVALIDATE_SECONDS };
+  if (!isNoStore && tags && tags.length > 0) {
     next.tags = tags;
   }
 
-  return backendJson<T>(path, { ...init, next } as RequestInit & { next: typeof next });
+  return backendJson<T>(path, { ...init, ...(isNoStore ? {} : { next }) } as RequestInit);
 }

@@ -369,6 +369,34 @@ const leadStatusSchema = z.object({
   status: z.enum(["NEW", "REVIEWED", "CONTACTED", "CLOSED"]),
 });
 
+const updateOrderSchema = z.object({
+  status: z.enum(["NEW", "REVIEWED", "CONTACTED", "CLOSED"]).optional(),
+  paymentStatus: z.enum(["CREATED", "PAID", "FAILED", "REFUNDED"]).optional(),
+  shipmentStatus: z
+    .enum([
+      "NOT_CREATED",
+      "PUSHED",
+      "PICKED_UP",
+      "IN_TRANSIT",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+      "RTO",
+      "CANCELLED",
+      "FAILED",
+    ])
+    .optional(),
+  notes: z.string().optional(),
+  shippingLine1: z.string().optional(),
+  shippingLine2: z.string().optional(),
+  shippingCity: z.string().optional(),
+  shippingState: z.string().optional(),
+  shippingPincode: z.string().optional(),
+  shippingCountry: z.string().optional(),
+  awbCode: z.string().optional(),
+  courierName: z.string().optional(),
+  trackingUrl: z.string().optional(),
+});
+
 const shippingSettingSchema = z.object({
   pickupLocationName: optionalString,
   defaultWeightGrams: z.number().int().positive().optional(),
@@ -1903,37 +1931,71 @@ adminRouter.post(
   })
 );
 
+const orderInclude = {
+  items: {
+    include: {
+      product: {
+        include: {
+          primaryImage: true,
+        },
+      },
+    },
+  },
+};
+
 adminRouter.get(
-  "/lead/order-requests",
+  ["/orders", "/lead/order-requests"],
   asyncHandler(async (_req, res) => {
     const items = await prisma.orderRequest.findMany({
-      include: { items: { include: { product: true } } },
+      include: orderInclude,
       orderBy: { createdAt: "desc" },
     });
     res.json({ items: items.map(serializeOrderRequest) });
   })
 );
 
-adminRouter.patch(
-  "/lead/order-requests/:id",
+adminRouter.get(
+  ["/orders/:id", "/lead/order-requests/:id"],
   asyncHandler(async (req, res) => {
-    const payload = parseBody(leadStatusSchema, req.body);
+    const id = routeParam(req, "id");
+    const item = await prisma.orderRequest.findUnique({
+      where: { id },
+      include: orderInclude,
+    });
+    if (!item) throw new HttpError(404, "order_not_found");
+    res.json({ item: serializeOrderRequest(item) });
+  })
+);
+
+adminRouter.patch(
+  ["/orders/:id", "/lead/order-requests/:id"],
+  asyncHandler(async (req, res) => {
+    const payload = parseBody(updateOrderSchema, req.body);
     const item = await prisma.orderRequest.update({
       where: { id: routeParam(req, "id") },
-      data: { status: payload.status },
-      include: { items: { include: { product: true } } },
+      data: {
+        ...(payload.status ? { status: payload.status } : {}),
+        ...(payload.paymentStatus ? { paymentStatus: payload.paymentStatus } : {}),
+        ...(payload.shipmentStatus ? { shipmentStatus: payload.shipmentStatus } : {}),
+        ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+        ...(payload.shippingLine1 !== undefined ? { shippingLine1: payload.shippingLine1 } : {}),
+        ...(payload.shippingLine2 !== undefined ? { shippingLine2: payload.shippingLine2 } : {}),
+        ...(payload.shippingCity !== undefined ? { shippingCity: payload.shippingCity } : {}),
+        ...(payload.shippingState !== undefined ? { shippingState: payload.shippingState } : {}),
+        ...(payload.shippingPincode !== undefined ? { shippingPincode: payload.shippingPincode } : {}),
+        ...(payload.shippingCountry !== undefined ? { shippingCountry: payload.shippingCountry } : {}),
+        ...(payload.awbCode !== undefined ? { awbCode: payload.awbCode } : {}),
+        ...(payload.courierName !== undefined ? { courierName: payload.courierName } : {}),
+        ...(payload.trackingUrl !== undefined ? { trackingUrl: payload.trackingUrl } : {}),
+      },
+      include: orderInclude,
     });
     res.json({ item: serializeOrderRequest(item) });
   })
 );
 
-// Admin retry: re-push a paid order to Shiprocket. Used when the
-// fire-and-forget path on payment-success failed (network, missing
-// pickup location, etc.). Guarded so duplicate retries can't create
-// duplicate Shiprocket orders — see `canPushToShiprocket` in
-// shiprocket-dispatch.ts.
 adminRouter.post(
-  "/lead/order-requests/:id/shiprocket/push",
+  ["/orders/:id/shiprocket/push", "/lead/order-requests/:id/shiprocket/push"],
   asyncHandler(async (req, res) => {
     const id = routeParam(req, "id");
     if (!id) throw new HttpError(400, "missing_id");
@@ -1941,7 +2003,7 @@ adminRouter.post(
     const outcome = await pushOrderToShiprocket(id);
 
     sendOrderConfirmation(id).catch((err) => {
-      console.error("[admin/leads] order confirmation crashed", err);
+      console.error("[admin/orders] order confirmation crashed", err);
     });
     
     if (!outcome.ok) {
@@ -1949,10 +2011,24 @@ adminRouter.post(
     }
     const item = await prisma.orderRequest.findUnique({
       where: { id },
-      include: { items: { include: { product: true } } },
+      include: orderInclude,
     });
     if (!item) throw new HttpError(404, "order_not_found");
     res.json({ item: serializeOrderRequest(item) });
+  })
+);
+
+adminRouter.post(
+  ["/orders/:id/resend-confirmation", "/lead/order-requests/:id/resend-confirmation"],
+  asyncHandler(async (req, res) => {
+    const id = routeParam(req, "id");
+    if (!id) throw new HttpError(400, "missing_id");
+    
+    const order = await prisma.orderRequest.findUnique({ where: { id } });
+    if (!order) throw new HttpError(404, "order_not_found");
+
+    await sendOrderConfirmation(id);
+    res.json({ ok: true, message: "Order confirmation email sent." });
   })
 );
 

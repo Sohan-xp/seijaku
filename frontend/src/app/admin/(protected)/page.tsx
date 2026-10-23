@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AdminCard from "@/src/components/admin/AdminCard";
 import AdminPage from "@/src/components/admin/AdminPage";
 import AdminStatusBadge from "@/src/components/admin/AdminStatusBadge";
@@ -35,7 +36,14 @@ export default async function AdminDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Object.entries(data.counts).map(([key, value]) => (
           <AdminCard key={key}>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a7e71]">{labels[key] ?? key}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a7e71]">{labels[key] ?? key}</p>
+              {key === "orderRequests" ? (
+                <Link href="/admin/orders" className="text-[10px] uppercase tracking-[0.18em] text-[#2e4a36] hover:underline">
+                  View →
+                </Link>
+              ) : null}
+            </div>
             <p className="mt-4 font-serif text-[40px] leading-none text-[#1d1916]">{value}</p>
           </AdminCard>
         ))}
@@ -43,7 +51,12 @@ export default async function AdminDashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-3">
         <AdminCard>
-          <h2 className="text-[22px]">Recent Order Requests</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-[22px]">Recent Order Requests</h2>
+            <Link href="/admin/orders" className="text-[11px] uppercase tracking-[0.18em] text-[#2e4a36] hover:underline">
+              View all →
+            </Link>
+          </div>
           <div className="mt-5 space-y-4">
             {data.recent.orderRequests.map((item) => (
               <div key={item.id} className="rounded-2xl border border-[#e2d7c7] bg-white px-4 py-4">
