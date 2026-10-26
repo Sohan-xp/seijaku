@@ -3,7 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 
-const HERO_IMAGE: string = "images/landingPage Banner.png";
+const HERO_IMAGE: string = "images/Landing Pg Banner 1 image_Seijaku Diwali Gift Set in Warm Light.png";
 const ICON_CURATED: string = "/images/Leaf Icon.png";
 const ICON_CUSTOM: string = "/images/Gift Box Icon.png";
 const ICON_GIFTING: string = "/images/Lotus Icon.png";
@@ -27,9 +27,9 @@ const imageMask: React.CSSProperties = {
         "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.55) 14%, #000 32%)",
 };
 
-const RITUAL_1_IMAGE: string = "/images/Seijaku Jasmine Home Fragrance Still Life.png";
-const RITUAL_2_IMAGE: string = "/images/Sandalwood Fragrance with Ornate Brass Mirror.png";
-const RITUAL_3_IMAGE: string = "/images/Seijaku Patchouli Leaf Fragrance Still Life.png";
+const RITUAL_1_IMAGE: string = "/images/The Little Seijaku display image_Bengal Monsoon Attar Still Life.png";
+const RITUAL_2_IMAGE: string = "/images/The Festive Ritual Box display image_Seijaku Luxury Gift Set Still Life.png";
+const RITUAL_3_IMAGE: string = "/images/The Seijaku Home Rituall display image_Chai diffuser ritual.png";
 
 const ICON_POCKET_SQUARE: string = "images/Festive Rituals Icon-1.png";
 const ICON_GIFT_BOX: string = "/images/Festive Rituals Icon-5.png";
@@ -38,7 +38,7 @@ const ICON_SCARF: string = "/images/Festive Rituals Icon-6.png";
 const ICON_DIFFUSER: string = "/images/Festive Rituals Icon-2.png";
 const ICON_OILS: string = "/images/Festive Rituals Icon-3.png";
 
-const STORY_IMAGE: string = "/images/ourStory.png";
+const STORY_IMAGE: string = "/images/Landing Page Banner 2 img_Seijaku Breath of Pines Still Life.png";
 
 const ICON_ARTISANAL: string = "/images/Leaf Icon.png";
 const ICON_PACKAGED: string = "/images/Gift Box Icon.png";
