@@ -64,11 +64,40 @@ paymentsRouter.post(
 
     const products = await prisma.product.findMany({
       where: { slug: { in: productSlugs }, workflowStatus: "PUBLISHED" },
+      include: {
+        options: {
+          include: { values: true },
+        },
+      },
     });
     if (products.length !== productSlugs.length) {
       throw new HttpError(400, "product_not_found");
     }
     const bySlug = new Map(products.map((product) => [product.slug, product]));
+
+    // Validate variant stock availability
+    for (const line of payload.items) {
+      const product = bySlug.get(line.productSlug);
+      if (!product) continue;
+      const quantity = line.quantity ?? 1;
+
+      if (line.selectedOptions && typeof line.selectedOptions === "object") {
+        for (const [optionLabel, valueLabel] of Object.entries(line.selectedOptions)) {
+          const option = product.options.find(
+            (o) => o.label === optionLabel || o.code === optionLabel
+          );
+          if (!option) continue;
+          const val = option.values.find(
+            (v) => v.label === valueLabel || v.value === valueLabel
+          );
+          if (val) {
+            if (!val.isActive || val.stock < quantity) {
+              throw new HttpError(400, `variant_out_of_stock: ${val.label} is currently out of stock`);
+            }
+          }
+        }
+      }
+    }
     
     const totalWeightGrams = payload.items.reduce((sum, line) => {
       const product = bySlug.get(line.productSlug);
@@ -203,6 +232,8 @@ paymentsRouter.post(
       sendOrderConfirmation(orderRequest.id).catch((err) => {
         console.error("[payments/verify] order confirmation crashed", err);
       });
+
+      decrementVariantStock(orderRequest.id);
     }
 
     res.json({
@@ -296,6 +327,8 @@ paymentsRouter.post(
             sendOrderConfirmation(row.id).catch((err) => {
               console.error("[payments/webhook] order confirmation crashed", err);
             });
+
+            decrementVariantStock(row.id);
           }
         }
       } else if (event === "payment.failed" && orderId) {
@@ -370,3 +403,49 @@ paymentsRouter.get(
     res.json({ item: order });
   }),
 );
+
+async function decrementVariantStock(orderRequestId: string) {
+  try {
+    const order = await prisma.orderRequest.findUnique({
+      where: { id: orderRequestId },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                options: {
+                  include: { values: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!order) return;
+
+    for (const item of order.items) {
+      if (!item.selectedOptionsJson || typeof item.selectedOptionsJson !== "object") continue;
+      const selectedOptions = item.selectedOptionsJson as Record<string, string>;
+      for (const [optionLabel, valueLabel] of Object.entries(selectedOptions)) {
+        const option = item.product?.options?.find(
+          (o) => o.label === optionLabel || o.code === optionLabel
+        );
+        if (!option) continue;
+        const val = option.values.find(
+          (v) => v.label === valueLabel || v.value === valueLabel
+        );
+        if (!val) continue;
+
+        const newStock = Math.max(0, val.stock - item.quantity);
+        await prisma.productOptionValue.update({
+          where: { id: val.id },
+          data: { stock: newStock },
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[payments] Failed to decrement variant stock:", err);
+  }
+}
+

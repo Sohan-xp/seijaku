@@ -171,7 +171,7 @@ publicRouter.get(
               : [{ publishedAt: "desc" }, { title: "asc" }],
     });
 
-    res.json({ items: products.map(serializeProduct) });
+    res.json({ items: products.map((p) => serializeProduct(p, { isPublic: true })) });
   })
 );
 
@@ -190,7 +190,7 @@ publicRouter.get(
       return;
     }
 
-    res.json({ item: serializeProduct(product) });
+    res.json({ item: serializeProduct(product, { isPublic: true }) });
   })
 );
 
@@ -218,7 +218,7 @@ publicRouter.get(
       return;
     }
 
-    res.json({ item: serializeBridgePage(page) });
+    res.json({ item: serializeBridgePage(page, { isPublic: true }) });
   })
 );
 

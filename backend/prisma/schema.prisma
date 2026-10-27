@@ -176,6 +176,7 @@ model ProductOptionValue {
   priceDeltaAmount Int           @default(0)
   sortOrder        Int           @default(0)
   isActive         Boolean       @default(true)
+  stock            Int           @default(10)
   productOption    ProductOption @relation(fields: [productOptionId], references: [id], onDelete: Cascade)
 
   @@unique([productOptionId, value])

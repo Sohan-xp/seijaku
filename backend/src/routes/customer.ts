@@ -262,7 +262,7 @@ customerRouter.get(
 
     const wishlistedProducts = customer.wishlistItems
       .filter((item) => item.product.workflowStatus === "PUBLISHED")
-      .map((item) => serializeProduct(item.product));
+      .map((item) => serializeProduct(item.product, { isPublic: true }));
 
     const wishlistSlugs = customer.wishlistItems.map((item) => item.product.slug);
     const cartData = await getCustomerCart(customer.id);
@@ -361,7 +361,7 @@ customerRouter.get(
     });
 
     const validItems = items.filter((item) => item.product.workflowStatus === "PUBLISHED");
-    const products = validItems.map((item) => serializeProduct(item.product));
+    const products = validItems.map((item) => serializeProduct(item.product, { isPublic: true }));
     const slugs = items.map((item) => item.product.slug);
 
     res.json({
@@ -488,7 +488,7 @@ customerRouter.post(
     });
 
     const validItems = allItems.filter((item) => item.product.workflowStatus === "PUBLISHED");
-    const products = validItems.map((item) => serializeProduct(item.product));
+    const products = validItems.map((item) => serializeProduct(item.product, { isPublic: true }));
     const allSlugs = allItems.map((item) => item.product.slug);
 
     res.json({
