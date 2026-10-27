@@ -240,6 +240,7 @@ const productOptionValueSchema = z.object({
   priceDeltaAmount: z.number().int().default(0),
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
+  stock: z.number().int().min(0).default(10),
 });
 
 const bridgePageSchema = z.object({

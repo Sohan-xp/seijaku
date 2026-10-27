@@ -1,4 +1,5 @@
-export function serializeProduct(product: any) {
+export function serializeProduct(product: any, serializeOptions?: { isPublic?: boolean } | number) {
+  const isPublic = typeof serializeOptions === "object" && serializeOptions !== null && Boolean(serializeOptions.isPublic);
   return {
     id: product.id,
     slug: product.slug,
@@ -43,7 +44,7 @@ export function serializeProduct(product: any) {
           kind: entry.mediaAsset.kind,
         },
       })),
-    options: product.options
+    options: (product.options ?? [])
       .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
       .map((option: any) => ({
         id: option.id,
@@ -53,8 +54,14 @@ export function serializeProduct(product: any) {
         required: option.required,
         sortOrder: option.sortOrder,
         metadata: option.metadataJson,
-        values: option.values
-          .filter((value: any) => value.isActive)
+        values: (option.values ?? [])
+          .filter((value: any) => {
+            if (!value.isActive) return false;
+            if (isPublic && (value.stock === null || value.stock === undefined || value.stock <= 0)) {
+              return false;
+            }
+            return true;
+          })
           .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
           .map((value: any) => ({
             id: value.id,
@@ -62,8 +69,16 @@ export function serializeProduct(product: any) {
             label: value.label,
             priceDeltaAmount: value.priceDeltaAmount,
             sortOrder: value.sortOrder,
+            stock: value.stock ?? 0,
+            isActive: value.isActive ?? true,
           })),
-      })),
+      }))
+      .filter((option: any) => {
+        if (isPublic && option.values.length === 0) {
+          return false;
+        }
+        return true;
+      }),
     categories: product.categories.map((entry: any) => ({
       id: entry.category.id,
       slug: entry.category.slug,
@@ -147,7 +162,8 @@ export function serializeCollection(collection: any) {
   };
 }
 
-export function serializeBridgePage(page: any) {
+export function serializeBridgePage(page: any, serializeOptions?: { isPublic?: boolean } | number) {
+  const isPublic = typeof serializeOptions === "object" && serializeOptions !== null && Boolean(serializeOptions.isPublic);
   return {
     id: page.id,
     slug: page.slug,
@@ -203,7 +219,7 @@ export function serializeBridgePage(page: any) {
     imageBreak2Alt: page.imageBreak2Alt,
     imageBreak3Image: page.imageBreak3Image,
     imageBreak3Alt: page.imageBreak3Alt,
-    products: page.products.sort((a: any, b: any) => a.sortOrder - b.sortOrder).map((entry: any) => serializeProduct(entry.product)),
+    products: (page.products ?? []).sort((a: any, b: any) => a.sortOrder - b.sortOrder).map((entry: any) => serializeProduct(entry.product, serializeOptions)),
     createdAt: page.createdAt.toISOString(),
     updatedAt: page.updatedAt.toISOString(),
   };
@@ -327,14 +343,15 @@ export function serializeProductNotification(record: any) {
   };
 }
 
-export function serializeStory(story: any) {
+export function serializeStory(story: any, serializeOptions?: { isPublic?: boolean } | number) {
+  const isPublic = typeof serializeOptions === "object" && serializeOptions !== null && Boolean(serializeOptions.isPublic);
   return {
     id: story.id,
     launchDate: story.launchDate.toISOString(),
     videoUrl: story.videoUrl,
     status: story.status,
-    perfumes: [story.perfume1, story.perfume2, story.perfume3].map(serializeProduct),
-    artifacts: [story.artifact1, story.artifact2, story.artifact3].map(serializeProduct),
+    perfumes: [story.perfume1, story.perfume2, story.perfume3].filter(Boolean).map((p: any) => serializeProduct(p, serializeOptions)),
+    artifacts: [story.artifact1, story.artifact2, story.artifact3].filter(Boolean).map((a: any) => serializeProduct(a, serializeOptions)),
     createdAt: story.createdAt.toISOString(),
     updatedAt: story.updatedAt.toISOString(),
   };

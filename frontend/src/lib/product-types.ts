@@ -41,6 +41,7 @@ export type ProductView = {
     valuesWithPricing?: Array<{
       label: string;
       priceDelta: number;
+      stock?: number;
     }>;
     required?: boolean;
   }>;
@@ -49,6 +50,7 @@ export type ProductView = {
 export type ProductOptionValueView = {
   label: string;
   priceDelta: number;
+  stock?: number;
 };
 
 export type ProductCustomizationOptionView = NonNullable<ProductView["customizationOptions"]>[number];
@@ -73,12 +75,17 @@ type BackendProductMedia = {
 };
 
 type BackendProductOptionValue = {
+  id?: string;
   label: string;
   value?: string;
   priceDeltaAmount?: number;
+  stock?: number;
+  isActive?: boolean;
 };
 
 type BackendProductOption = {
+  id?: string;
+  code?: string;
   label: string;
   required: boolean;
   values: BackendProductOptionValue[];
@@ -191,18 +198,28 @@ export function normalizeBackendProduct(b: BackendProduct): ProductView | null {
     ctaLabel: b.ctaLabel ?? undefined,
     status: STATUS_DISPLAY[b.status],
     releaseDate: b.releaseDate,
-    customizationOptions:
-      b.options.length > 0
-        ? b.options.map((o) => ({
+    customizationOptions: (() => {
+      if (!b.options || b.options.length === 0) return undefined;
+      const opts = b.options
+        .map((o) => {
+          const inStockValues = (o.values ?? []).filter(
+            (v) => (v.stock === undefined || v.stock === null || v.stock > 0) && (v.isActive ?? true)
+          );
+          return {
             label: o.label,
-            values: o.values.map((v) => v.label),
-            valuesWithPricing: o.values.map((v) => ({
+            values: inStockValues.map((v) => v.label),
+            valuesWithPricing: inStockValues.map((v) => ({
               label: v.label,
               priceDelta: v.priceDeltaAmount ?? 0,
+              stock: v.stock,
             })),
             required: o.required || undefined,
-          }))
-        : undefined,
+          };
+        })
+        .filter((o) => o.values.length > 0);
+
+      return opts.length > 0 ? opts : undefined;
+    })(),
   };
 }
 
