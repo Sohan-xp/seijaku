@@ -136,7 +136,7 @@ const LandingPage = () => {
                 }}
             >
                 <div className="relative z-10 flex flex-col px-5 pb-6 pt-10 sm:px-10 sm:pt-12 md:px-14 lg:min-h-[inherit] lg:justify-between lg:px-[5vw] lg:pb-10 lg:pt-[clamp(40px,4vw,80px)] 2xl:px-[6vw]">
-                    <div className="max-w-[560px] lg:max-w-[min(46%,640px)]">
+                    <div className="max-w-[560px] lg:max-w-[min(46%,640px)] mt-20">
                         <p className="font-sans text-[10px] font-medium uppercase tracking-[0.17em] text-[#6E4B40] sm:text-[11px] 2xl:text-[13px]">
                             Festive rituals, for meaningful people
                         </p>
@@ -158,8 +158,9 @@ const LandingPage = () => {
                         </p>
 
                         <a
-                            onClick={handleRedirectToBuildGift}
-                            className="mt-8 inline-flex h-[46px] w-full items-center justify-center gap-2 bg-[#2B3B2F] font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-[#F6EEE4] transition-colors hover:bg-[#1F2C23] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2B3B2F] sm:mt-9 sm:h-[44px] sm:w-[240px] lg:h-[clamp(44px,2.6vw,56px)] lg:w-[clamp(232px,15vw,300px)] lg:text-[clamp(12px,0.75vw,14px)]"
+                            // onClick={handleRedirectToBuildGift}
+                            href="#build-gift-listing"
+                            className="cursor-pointer mt-8 inline-flex h-[46px] w-full items-center justify-center gap-2 bg-[#2B3B2F] font-sans text-[12px] font-medium uppercase tracking-[0.16em] text-[#F6EEE4] transition-colors hover:bg-[#1F2C23] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2B3B2F] sm:mt-9 sm:h-[44px] sm:w-[240px] lg:h-[clamp(44px,2.6vw,56px)] lg:w-[clamp(232px,15vw,300px)] lg:text-[clamp(12px,0.75vw,14px)]"
                         >
                             Build your gift
                             <span aria-hidden="true">→</span>
@@ -200,7 +201,7 @@ const LandingPage = () => {
                     />
 
                     {/* Category links: pill on mobile/tablet, vertical panel on desktop */}
-                    <ul className="absolute inset-x-4 bottom-4 mx-auto flex w-fit items-center gap-5 bg-[#F8EDE2]/80 px-5 py-2.5 backdrop-blur-[2px] sm:gap-8 sm:px-8 lg:inset-x-auto lg:bottom-auto lg:right-0 lg:top-[clamp(24px,2vw,40px)] lg:mx-0 lg:block lg:w-auto lg:bg-[#F8EDE2]/70 lg:py-5 lg:pl-9 lg:pr-8 2xl:pl-12 2xl:pr-10">
+                    <ul className="absolute inset-x-4 bottom-4 mx-auto flex w-fit items-center gap-5 bg-[#F8EDE2]/80 px-5 py-2.5 backdrop-blur-[2px] sm:gap-8 sm:px-8 lg:inset-x-auto lg:bottom-auto lg:right-0 lg:top-[clamp(24px,2vw,40px)] lg:mx-0 lg:block lg:w-auto lg:bg-[#F8EDE2]/70 lg:py-5 lg:pl-9 lg:pr-8 2xl:pl-12 2xl:pr-10 mt-20">
                         {sideLinks.map((item) => (
                             <li
                                 key={item}
@@ -219,6 +220,7 @@ const LandingPage = () => {
                     fontFamily:
                         "'EB Garamond', 'Cormorant Garamond', Georgia, serif",
                 }}
+                id="build-gift-listing"
             >
                 <div className="mx-auto w-full max-w-[1100px] 2xl:max-w-[1400px]">
                     {/* ---------- Heading ---------- */}
@@ -282,7 +284,7 @@ const LandingPage = () => {
 
                                     <a
                                         onClick={handleRedirectToBuildGift}
-                                        className="mt-auto inline-flex h-[46px] w-full items-center justify-center gap-2 bg-[#2B3B2F] font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-[#F6EEE4] transition-colors hover:bg-[#1F2C23] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2B3B2F] lg:h-[clamp(44px,2.8vw,58px)] lg:text-[clamp(11px,0.75vw,14px)]"
+                                        className="cursor-pointer mt-auto inline-flex h-[46px] w-full items-center justify-center gap-2 bg-[#2B3B2F] font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-[#F6EEE4] transition-colors hover:bg-[#1F2C23] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2B3B2F] lg:h-[clamp(44px,2.8vw,58px)] lg:text-[clamp(11px,0.75vw,14px)]"
                                     >
                                         Build this gift
                                         <span aria-hidden="true">→</span>
@@ -312,14 +314,6 @@ const LandingPage = () => {
                             Handcrafted in India. Inspired by Bengal and Japan. Made for
                             slower, more meaningful moments.
                         </p>
-
-                        <a
-                            href="#our-story"
-                            className="mt-6 inline-flex items-center gap-2 font-sans text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2A1D1B] transition-opacity hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2B3B2F] lg:text-[clamp(12px,0.8vw,15px)]"
-                        >
-                            Our story
-                            <span aria-hidden="true">→</span>
-                        </a>
                     </div>
                 </div>
 
@@ -394,8 +388,9 @@ const LandingPage = () => {
                     </p>
 
                     <a
-                        onClick={handleRedirectToBuildGift}
-                        className="group mt-6 inline-flex h-[46px] w-full max-w-[260px] items-center justify-center gap-2 bg-[#F7F1E8] font-sans text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2A1D1B] transition-colors duration-300 hover:bg-[#D9A878] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F7F1E8] lg:mt-[clamp(22px,1.8vw,40px)] lg:h-[clamp(46px,3vw,60px)] lg:w-[clamp(220px,14vw,300px)] lg:max-w-none lg:text-[clamp(12px,0.8vw,15px)]"
+                        // onClick={handleRedirectToBuildGift}
+                        href="#build-gift-listing"
+                        className="cursor-pointer group mt-6 inline-flex h-[46px] w-full max-w-[260px] items-center justify-center gap-2 bg-[#F7F1E8] font-sans text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2A1D1B] transition-colors duration-300 hover:bg-[#D9A878] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F7F1E8] lg:mt-[clamp(22px,1.8vw,40px)] lg:h-[clamp(46px,3vw,60px)] lg:w-[clamp(220px,14vw,300px)] lg:max-w-none lg:text-[clamp(12px,0.8vw,15px)]"
                     >
                         Start building
                         <span

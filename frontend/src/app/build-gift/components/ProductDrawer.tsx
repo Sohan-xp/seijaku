@@ -86,7 +86,7 @@ export default function ProductDrawer({
         useState<ShopPriceFilterOption | "All">("All");
     const [sortBy, setSortBy] = useState<ShopSortOption>("Recommended");
     const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH_SIZE);
-    const [isRailCollapsed, setIsRailCollapsed] = useState(false);
+    const [isRailCollapsed, setIsRailCollapsed] = useState(true);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
     const detailSlug = searchParams.get("item");
@@ -226,11 +226,11 @@ export default function ProductDrawer({
                 <section className="pb-16 sm:pb-20">
                     <div className="w-full">
                         <div
-                            className={`grid gap-6 ${
-                                isRailCollapsed
-                                    ? "lg:grid-cols-1"
-                                    : "lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8"
-                            }`}
+                            // className={`grid gap-6 ${
+                            //     isRailCollapsed
+                            //         ? "lg:grid-cols-1"
+                            //         : "lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8"
+                            // }`}
                         >
                             {!isRailCollapsed && (
                                 <aside className="hidden lg:block">
