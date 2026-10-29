@@ -93,6 +93,8 @@ export type ProductSummary = {
       label: string;
       priceDeltaAmount: number;
       sortOrder: number;
+      stock?: number;
+      isActive?: boolean;
     }>;
   }>;
   categories: Array<{ id: string; slug: string; name: string; kind: string; sortOrder: number }>;

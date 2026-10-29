@@ -50,6 +50,8 @@ type ProductOptionDraft = {
     label: string;
     priceDeltaAmount: number;
     sortOrder: number;
+    stock: number;
+    isActive?: boolean;
   }>;
 };
 
@@ -136,12 +138,14 @@ function buildOptionsState(product: ProductSummary | null): ProductOptionDraft[]
       selectionMode: option.selectionMode,
       required: option.required,
       sortOrder: option.sortOrder,
-      values: option.values.map((value) => ({
+      values: option.values.map((value: any) => ({
         id: value.id,
         value: value.value,
         label: value.label,
         priceDeltaAmount: value.priceDeltaAmount,
         sortOrder: value.sortOrder,
+        stock: typeof value.stock === "number" ? value.stock : 10,
+        isActive: value.isActive ?? true,
       })),
     })) ?? []
   );
@@ -466,6 +470,7 @@ export default function ProductEditor({
         label: "New Value",
         priceDeltaAmount: 0,
         sortOrder: index,
+        stock: 10,
         isActive: true,
       }),
     });
@@ -485,7 +490,8 @@ export default function ProductEditor({
         label: value.label,
         priceDeltaAmount: value.priceDeltaAmount,
         sortOrder: value.sortOrder,
-        isActive: true,
+        stock: value.stock,
+        isActive: value.isActive ?? true,
       }),
     });
     if (!res.ok) {
@@ -1365,57 +1371,142 @@ function OptionEditor({
 
       {option.values.length > 0 ? (
         <div className="mt-4 space-y-3">
-          {option.values.map((value, valueIndex) => (
-            <div key={value.id} className="rounded-xl border border-[#ece2d2] bg-[#fbf8f3] p-3">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <AdminField label="Value">
-                  <input
-                    value={value.value}
-                    onChange={(e) => updateValueField(valueIndex, "value", e.target.value)}
-                    className={adminInputClassName}
-                  />
-                </AdminField>
-                <AdminField label="Label">
-                  <input
-                    value={value.label}
-                    onChange={(e) => updateValueField(valueIndex, "label", e.target.value)}
-                    className={adminInputClassName}
-                  />
-                </AdminField>
-                <AdminField label="Δ price">
-                  <input
-                    type="number"
-                    value={value.priceDeltaAmount}
-                    onChange={(e) => updateValueField(valueIndex, "priceDeltaAmount", Number(e.target.value))}
-                    className={adminInputClassName}
-                  />
-                </AdminField>
-                <AdminField label="Sort">
-                  <input
-                    type="number"
-                    value={value.sortOrder}
-                    onChange={(e) => updateValueField(valueIndex, "sortOrder", Number(e.target.value))}
-                    className={adminInputClassName}
-                  />
-                </AdminField>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => onSaveValue(value)} disabled={isPending} className={adminButtonClassName}>
-                  Save value
-                </button>
-                {canDelete ? (
+          {option.values.map((value, valueIndex) => {
+            const isInStock = value.stock > 0;
+            return (
+              <div
+                key={value.id}
+                className={`rounded-xl border p-3.5 transition-all ${
+                  isInStock
+                    ? "border-[#ece2d2] bg-[#fbf8f3]"
+                    : "border-[#f0d4cf] bg-[#fffaf9]"
+                }`}
+              >
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  <AdminField label="Value">
+                    <input
+                      value={value.value}
+                      onChange={(e) => updateValueField(valueIndex, "value", e.target.value)}
+                      className={adminInputClassName}
+                    />
+                  </AdminField>
+                  <AdminField label="Label">
+                    <input
+                      value={value.label}
+                      onChange={(e) => updateValueField(valueIndex, "label", e.target.value)}
+                      className={adminInputClassName}
+                    />
+                  </AdminField>
+                  <AdminField label="Δ price">
+                    <input
+                      type="number"
+                      value={value.priceDeltaAmount}
+                      onChange={(e) => updateValueField(valueIndex, "priceDeltaAmount", Number(e.target.value))}
+                      className={adminInputClassName}
+                    />
+                  </AdminField>
+                  <AdminField label="Sort">
+                    <input
+                      type="number"
+                      value={value.sortOrder}
+                      onChange={(e) => updateValueField(valueIndex, "sortOrder", Number(e.target.value))}
+                      className={adminInputClassName}
+                    />
+                  </AdminField>
+                  <AdminField label="Stock (Qty)">
+                    <input
+                      type="number"
+                      min="0"
+                      value={value.stock}
+                      onChange={(e) =>
+                        updateValueField(
+                          valueIndex,
+                          "stock",
+                          Math.max(0, parseInt(e.target.value || "0", 10))
+                        )
+                      }
+                      className={`${adminInputClassName} ${
+                        !isInStock
+                          ? "border-[#d88980] bg-[#fff5f4] text-[#a4372b] font-semibold"
+                          : "font-semibold text-[#294536]"
+                      }`}
+                    />
+                  </AdminField>
+                </div>
+
+                {/* Stock status indicator and quick actions */}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#ece2d2]/70 pt-2.5">
+                  <div className="flex items-center gap-2">
+                    {isInStock ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e8f2ea] px-2.5 py-0.5 text-[11px] font-medium text-[#265330]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#2e743c]"></span>
+                        In Stock ({value.stock} units)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fdeeed] px-2.5 py-0.5 text-[11px] font-semibold text-[#b33125]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#c5372a]"></span>
+                        Out of Stock · Hidden on Frontend
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <span className="text-[#84786d] font-sans">Quick Stock:</span>
+                    <button
+                      type="button"
+                      onClick={() => updateValueField(valueIndex, "stock", 0)}
+                      className={`rounded-md border px-2 py-0.5 text-[11px] transition ${
+                        value.stock === 0
+                          ? "border-[#d88980] bg-[#fff0ef] text-[#a4372b] font-medium"
+                          : "border-[#e2d7c7] bg-white text-[#716455] hover:bg-[#f3ede3]"
+                      }`}
+                    >
+                      Set 0 (Out)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateValueField(valueIndex, "stock", (value.stock || 0) + 5)
+                      }
+                      className="rounded-md border border-[#e2d7c7] bg-white px-2 py-0.5 text-[11px] text-[#716455] hover:bg-[#f3ede3] transition"
+                    >
+                      +5
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateValueField(valueIndex, "stock", (value.stock || 0) + 10)
+                      }
+                      className="rounded-md border border-[#e2d7c7] bg-white px-2 py-0.5 text-[11px] text-[#716455] hover:bg-[#f3ede3] transition"
+                    >
+                      +10
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => onDeleteValue(value.id)}
+                    onClick={() => onSaveValue(value)}
                     disabled={isPending}
-                    className={adminDangerButtonClassName}
+                    className={adminButtonClassName}
                   >
-                    Delete value
+                    Save value
                   </button>
-                ) : null}
+                  {canDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteValue(value.id)}
+                      disabled={isPending}
+                      className={adminDangerButtonClassName}
+                    >
+                      Delete value
+                    </button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
     </div>

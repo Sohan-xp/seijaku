@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "ProductOptionValue" ADD COLUMN IF NOT EXISTS "stock" INTEGER NOT NULL DEFAULT 10;
