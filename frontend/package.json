@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev",
-    "devw": "set NEXT_IGNORE_INCORRECT_LOCKFILE=1&& next dev",  
+    "devw": "set NEXT_IGNORE_INCORRECT_LOCKFILE=1&& set SITE_URL='https://manufactured-smoke-terms-compounds.trycloudflare.com' && next dev",  
     "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build",
     "start": "next start",
     "lint": "eslint"

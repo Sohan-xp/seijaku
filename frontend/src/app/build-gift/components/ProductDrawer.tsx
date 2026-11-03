@@ -87,6 +87,7 @@ export default function ProductDrawer({
     const [sortBy, setSortBy] = useState<ShopSortOption>("Recommended");
     const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH_SIZE);
     const [isRailCollapsed, setIsRailCollapsed] = useState(true);
+    // const [isRailCollapsed, setIsRailCollapsed] = useState(true);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
     const detailSlug = searchParams.get("item");
@@ -94,16 +95,24 @@ export default function ProductDrawer({
         ? products.find((product) => product.slug === detailSlug) ?? null
         : null;
 
+    // useEffect(() => {
+    //     try {
+    //         setIsRailCollapsed(
+    //             localStorage.getItem(RAIL_COLLAPSE_STORAGE_KEY) === "true",
+    //         );
+    //     } catch {
+    //         // localStorage can be unavailable in restricted/private browsing.
+    //     }
+    // }, []);
     useEffect(() => {
         try {
             setIsRailCollapsed(
                 localStorage.getItem(RAIL_COLLAPSE_STORAGE_KEY) === "true",
             );
         } catch {
-            // localStorage can be unavailable in restricted/private browsing.
+            // localStorage can be unavailable
         }
     }, []);
-
     const types = useMemo(() => {
         const available = getShopTypes().filter((type) =>
             products.some((product) => matchesShopTypeFilter(product, type)),
@@ -226,11 +235,11 @@ export default function ProductDrawer({
                 <section className="pb-16 sm:pb-20">
                     <div className="w-full">
                         <div
-                            // className={`grid gap-6 ${
-                            //     isRailCollapsed
-                            //         ? "lg:grid-cols-1"
-                            //         : "lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8"
-                            // }`}
+                        // className={`grid gap-6 ${
+                        //     isRailCollapsed
+                        //         ? "lg:grid-cols-1"
+                        //         : "lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8"
+                        // }`}
                         >
                             {!isRailCollapsed && (
                                 <aside className="hidden lg:block">
@@ -307,7 +316,7 @@ export default function ProductDrawer({
                                             {visibleProducts.map((product) => {
                                                 const countForProduct =
                                                     selectedCountsByProductId[
-                                                        product.id
+                                                    product.id
                                                     ] ?? 0;
                                                 return (
                                                     <CompactProductCard
@@ -337,7 +346,7 @@ export default function ProductDrawer({
                                                     type="button"
                                                     onClick={() =>
                                                         setVisibleCount(
-                                                             (count) =>
+                                                            (count) =>
                                                                 count +
                                                                 LOAD_MORE_STEP,
                                                         )

@@ -22,7 +22,8 @@ function addRemotePattern(urlStr: string | undefined) {
 addRemotePattern(process.env.BACKEND_INTERNAL_URL);
 addRemotePattern(process.env.NEXT_PUBLIC_API_URL);
 addRemotePattern(process.env.SITE_URL);
-addRemotePattern("http://localhost:4001");
+// addRemotePattern("http://localhost:4001");
+addRemotePattern("https://manufactured-smoke-terms-compounds.trycloudflare.com");
 
 const nextConfig: NextConfig = {
   images: {
@@ -33,7 +34,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/uploads/:path*",
-        destination: `${process.env.BACKEND_INTERNAL_URL || "http://localhost:4001"}/uploads/:path*`,
+        destination: `${process.env.BACKEND_INTERNAL_URL || "https://manufactured-smoke-terms-compounds.trycloudflare.com"}/uploads/:path*`,
       },
     ];
   },

@@ -80,16 +80,16 @@ type ShopAllPageClientProps = {
 };
 
 export default function ShopAllPageClient({ products }: ShopAllPageClientProps) {
-  const pathname                                    = usePathname();
-  const router                                      = useRouter();
-  const [searchValue, setSearchValue]               = useState("");
-  const [selectedType, setSelectedType]             = useState<ShopTypeFilterOption | "All">("All");
-  const [selectedMaterial, setSelectedMaterial]     = useState<ShopMaterialFilterOption | "All">("All");
-  const [selectedUseCase, setSelectedUseCase]       = useState<ShopUseCase | "All">("All");
-  const [selectedPrice, setSelectedPrice]           = useState<ShopPriceFilterOption | "All">("All");
-  const [sortBy, setSortBy]                         = useState<ShopSortOption>("Recommended");
-  const [visibleCount, setVisibleCount]             = useState(INITIAL_BATCH_SIZE);
-  const [isRailCollapsed, setIsRailCollapsed]       = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState("");
+  const [selectedType, setSelectedType] = useState<ShopTypeFilterOption | "All">("All");
+  const [selectedMaterial, setSelectedMaterial] = useState<ShopMaterialFilterOption | "All">("All");
+  const [selectedUseCase, setSelectedUseCase] = useState<ShopUseCase | "All">("All");
+  const [selectedPrice, setSelectedPrice] = useState<ShopPriceFilterOption | "All">("All");
+  const [sortBy, setSortBy] = useState<ShopSortOption>("Recommended");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH_SIZE);
+  const [isRailCollapsed, setIsRailCollapsed] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Hydrate collapse preference from localStorage after mount to avoid SSR
@@ -256,23 +256,22 @@ export default function ShopAllPageClient({ products }: ShopAllPageClientProps) 
     <>
       <main className="min-h-screen bg-[#f3efe7] pt-[72px] text-[#3a3a3a] sm:pt-[76px]">
         {/* <section className="section-primary pb-6 pt-18 sm:pb-7 sm:pt-22"> */}
-          <div className="page-container max-w-[1240px] pb-6 pt-18 sm:pb-7 sm:pt-22">
-            <div className="max-w-[760px]">
-              <p className="text-[9px] uppercase tracking-[0.32em] text-[#9a785d]">Collection</p>
-              <h1 className="mt-4 text-[clamp(34px,4.2vw,50px)] leading-[1.04] tracking-[-0.03em] text-[#1d1a17]">Shop All</h1>
-              <p className="mt-3 max-w-[44ch] text-[15px] leading-[1.82] text-[#5f584f]">
-                A searchable Seijaku catalog designed for quick scanning, quieter comparison, and detail on demand.
-              </p>
-            </div>
+        <div className="page-container max-w-[1240px] pb-6 pt-18 sm:pb-7 sm:pt-22">
+          <div className="max-w-[760px]">
+            <p className="text-[9px] uppercase tracking-[0.32em] text-[#9a785d]">Collection</p>
+            <h1 className="mt-4 text-[clamp(34px,4.2vw,50px)] leading-[1.04] tracking-[-0.03em] text-[#1d1a17]">Shop All</h1>
+            <p className="mt-3 max-w-[44ch] text-[15px] leading-[1.82] text-[#5f584f]">
+              A searchable Seijaku catalog designed for quick scanning, quieter comparison, and detail on demand.
+            </p>
           </div>
+        </div>
         {/* </section> */}
 
         <section className="pb-20 sm:pb-24">
           <div className="page-container max-w-[1240px]">
             <div
-              className={`grid gap-8 ${
-                isRailCollapsed ? "lg:grid-cols-1" : "lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-10 xl:gap-12"
-              }`}
+              className={`grid gap-8 ${isRailCollapsed ? "lg:grid-cols-1" : "lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-10 xl:gap-12"
+                }`}
             >
               {!isRailCollapsed ? (
                 <aside className="hidden lg:block">
