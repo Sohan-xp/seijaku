@@ -48,6 +48,7 @@ const NAV_LINKS = [
 
 export default function GiftLandingNavbar() {
     const pathname = usePathname();
+    const isBuildGift = pathname === "/build-gift" || pathname?.startsWith("/build-gift");
 
     const {
         customer,
@@ -333,39 +334,74 @@ export default function GiftLandingNavbar() {
                         </div>
 
                         {/* Brand */}
-                        <Link
-                            href="/"
-                            aria-label="Go to home page"
-                            className="
-                                flex
-                                shrink-0
-                                items-center
-                                gap-2
-                                text-[#4b3b31]
-                            "
-                        >
-                            <Image
-                                src="/images/seijaku-emblem-g.png"
-                                alt=""
-                                width={50}
-                                height={50}
-                                priority
+                        {isBuildGift ? (
+                            <div
                                 className="
-                                    object-contain
-                                "
-                            />
-
-                            <span
-                                className="
-                                    font-serif
-                                    text-[18px]
-                                    tracking-[0.34em]
-                                    sm:text-[20px]
+                                    flex
+                                    shrink-0
+                                    items-center
+                                    gap-2
+                                    text-[#4b3b31]
+                                    cursor-default
                                 "
                             >
-                                SEIJAKU
-                            </span>
-                        </Link>
+                                <Image
+                                    src="/images/seijaku-emblem-g.png"
+                                    alt=""
+                                    width={50}
+                                    height={50}
+                                    priority
+                                    className="
+                                        object-contain
+                                    "
+                                />
+
+                                <span
+                                    className="
+                                        font-serif
+                                        text-[18px]
+                                        tracking-[0.34em]
+                                        sm:text-[20px]
+                                    "
+                                >
+                                    SEIJAKU
+                                </span>
+                            </div>
+                        ) : (
+                            <Link
+                                href="/"
+                                aria-label="Go to home page"
+                                className="
+                                    flex
+                                    shrink-0
+                                    items-center
+                                    gap-2
+                                    text-[#4b3b31]
+                                "
+                            >
+                                <Image
+                                    src="/images/seijaku-emblem-g.png"
+                                    alt=""
+                                    width={50}
+                                    height={50}
+                                    priority
+                                    className="
+                                        object-contain
+                                    "
+                                />
+
+                                <span
+                                    className="
+                                        font-serif
+                                        text-[18px]
+                                        tracking-[0.34em]
+                                        sm:text-[20px]
+                                    "
+                                >
+                                    SEIJAKU
+                                </span>
+                            </Link>
+                        )}
 
                         {/* Desktop Navigation */}
                         {/* <nav

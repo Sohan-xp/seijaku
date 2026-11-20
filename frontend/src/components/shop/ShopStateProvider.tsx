@@ -57,6 +57,7 @@ type ShopStateContextValue = {
   removeFromCart: (cartItemId: string) => void;
   updateCartQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
+  syncGiftBundleToCart: (items: AddToCartPayload[]) => void;
 
   // Direct checkout
   checkoutItemSlug: string | null;
@@ -75,6 +76,14 @@ const CHECKOUT_OPTIONS_KEY = "seijaku-checkout-options";
 function generateCartItemId(slug: string, variantLabel?: string | null, options?: Record<string, string> | null) {
   const optionsKey = options ? Object.entries(options).sort().map(([k, v]) => `${k}:${v}`).join("|") : "";
   return `${slug}__${variantLabel || "default"}__${optionsKey}`;
+}
+
+export function isGiftCartItem(item: CartItem): boolean {
+  return Boolean(
+    item.selectedOptions?.["Gift Packaging"] === "Festive Gift Box & Handwritten Card" ||
+    item.selectedOptions?.["Gift Category"] ||
+    item.variantLabel?.startsWith("[Gift Box")
+  );
 }
 
 function readStorageCart(): CartItem[] {
@@ -394,7 +403,26 @@ export function ShopStateProvider({ children }: { children: React.ReactNode }) {
 
   const removeFromCart = useCallback(
     (cartItemId: string) => {
-      setCart((prevCart) => prevCart.filter((item) => item.id !== cartItemId));
+      let removedGiftSlug: string | null = null;
+      setCart((prevCart) => {
+        const itemToRemove = prevCart.find((item) => item.id === cartItemId);
+        if (itemToRemove && isGiftCartItem(itemToRemove)) {
+          removedGiftSlug = itemToRemove.productSlug;
+        }
+        return prevCart.filter((item) => item.id !== cartItemId);
+      });
+
+      if (removedGiftSlug && typeof window !== "undefined") {
+        setTimeout(() => {
+          try {
+            window.dispatchEvent(
+              new CustomEvent("seijaku-gift-cart-removed", {
+                detail: { productSlug: removedGiftSlug },
+              })
+            );
+          } catch {}
+        }, 0);
+      }
 
       if (token) {
         fetch(`/api/public/customer/cart/item/${encodeURIComponent(cartItemId)}`, {
@@ -416,6 +444,115 @@ export function ShopStateProvider({ children }: { children: React.ReactNode }) {
     [token]
   );
 
+  const syncGiftBundleToCart = useCallback(
+    (giftPayloads: AddToCartPayload[]) => {
+      setCart((prevCart) => {
+        const nonGiftItems = prevCart.filter((item) => !isGiftCartItem(item));
+
+        const newGiftCartItems: CartItem[] = [];
+        for (const payload of giftPayloads) {
+          const {
+            productSlug,
+            title,
+            unitPrice,
+            priceLabel,
+            quantity = 1,
+            image,
+            shortDescription,
+            variantLabel,
+            selectedOptions,
+            weightGrams,
+            lengthCm,
+            breadthCm,
+            heightCm,
+          } = payload;
+
+          const itemId = generateCartItemId(productSlug, variantLabel, selectedOptions);
+          const existing = newGiftCartItems.find((c) => c.id === itemId);
+          if (existing) {
+            existing.quantity += quantity;
+          } else {
+            newGiftCartItems.push({
+              id: itemId,
+              productSlug,
+              title,
+              unitPrice,
+              priceLabel,
+              quantity,
+              image,
+              shortDescription,
+              variantLabel: variantLabel || null,
+              selectedOptions: selectedOptions || null,
+              weightGrams: weightGrams ?? null,
+              lengthCm: lengthCm ?? null,
+              breadthCm: breadthCm ?? null,
+              heightCm: heightCm ?? null,
+            });
+          }
+        }
+
+        const nextCart = [...nonGiftItems, ...newGiftCartItems];
+
+        // Bail out if cart is already identical to prevent redundant re-renders
+        if (
+          prevCart.length === nextCart.length &&
+          prevCart.every(
+            (item, idx) => item.id === nextCart[idx]?.id && item.quantity === nextCart[idx]?.quantity
+          )
+        ) {
+          return prevCart;
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(CART_KEY, JSON.stringify(nextCart));
+          } catch {}
+        }
+
+        return nextCart;
+      });
+
+      if (token) {
+        try {
+          const localCart = readStorageCart();
+          const nonGift = localCart.filter((item) => !isGiftCartItem(item));
+          const updatedItems = [
+            ...nonGift.map((it) => ({
+              productSlug: it.productSlug,
+              quantity: it.quantity,
+              variantLabel: it.variantLabel || null,
+              selectedOptions: it.selectedOptions || null,
+            })),
+            ...giftPayloads.map((it) => ({
+              productSlug: it.productSlug,
+              quantity: it.quantity || 1,
+              variantLabel: it.variantLabel || null,
+              selectedOptions: it.selectedOptions || null,
+            })),
+          ];
+
+          fetch("/api/public/customer/cart/sync", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ items: updatedItems }),
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data?.cart && Array.isArray(data.cart)) {
+                setCart(data.cart);
+              }
+            })
+            .catch((err) => console.error("Gift cart sync error", err));
+        } catch {}
+      }
+    },
+    [token]
+  );
+
   const updateCartQuantity = useCallback(
     (cartItemId: string, quantity: number) => {
       if (quantity <= 0) {
@@ -423,9 +560,26 @@ export function ShopStateProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setCart((prevCart) =>
-        prevCart.map((item) => (item.id === cartItemId ? { ...item, quantity } : item))
-      );
+      let removedGiftSlug: string | null = null;
+      setCart((prevCart) => {
+        const existing = prevCart.find((item) => item.id === cartItemId);
+        if (existing && isGiftCartItem(existing) && quantity < existing.quantity) {
+          removedGiftSlug = existing.productSlug;
+        }
+        return prevCart.map((item) => (item.id === cartItemId ? { ...item, quantity } : item));
+      });
+
+      if (removedGiftSlug && typeof window !== "undefined") {
+        setTimeout(() => {
+          try {
+            window.dispatchEvent(
+              new CustomEvent("seijaku-gift-cart-removed", {
+                detail: { productSlug: removedGiftSlug },
+              })
+            );
+          } catch {}
+        }, 0);
+      }
 
       if (token) {
         fetch("/api/public/customer/cart/quantity", {
@@ -456,6 +610,11 @@ export function ShopStateProvider({ children }: { children: React.ReactNode }) {
     setCart([]);
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(CART_KEY);
+      setTimeout(() => {
+        try {
+          window.dispatchEvent(new CustomEvent("seijaku-gift-cart-cleared"));
+        } catch {}
+      }, 0);
     }
 
     if (token) {
@@ -502,6 +661,7 @@ export function ShopStateProvider({ children }: { children: React.ReactNode }) {
       removeFromCart,
       updateCartQuantity,
       clearCart,
+      syncGiftBundleToCart,
 
       // Direct checkout
       checkoutItemSlug,
@@ -559,6 +719,7 @@ export function ShopStateProvider({ children }: { children: React.ReactNode }) {
       removeFromCart,
       updateCartQuantity,
       clearCart,
+      syncGiftBundleToCart,
       checkoutItemSlug,
       checkoutVariantLabel,
       checkoutSelectedOptions,

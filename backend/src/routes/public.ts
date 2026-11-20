@@ -178,10 +178,34 @@ publicRouter.get(
 publicRouter.get(
   "/catalog/products/:slug",
   asyncHandler(async (req, res) => {
-    const product = await prisma.product.findUnique({
-      where: { slug: routeParam(req, "slug") },
+    const rawSlug = routeParam(req, "slug");
+    const trimmedSlug = rawSlug ? rawSlug.trim() : "";
+
+    let product = await prisma.product.findUnique({
+      where: { slug: rawSlug },
       include: productInclude,
     });
+
+    if (!product && trimmedSlug && trimmedSlug !== rawSlug) {
+      product = await prisma.product.findUnique({
+        where: { slug: trimmedSlug },
+        include: productInclude,
+      });
+    }
+
+    if (!product && trimmedSlug) {
+      product = await prisma.product.findFirst({
+        where: {
+          OR: [
+            { slug: { equals: trimmedSlug, mode: "insensitive" } },
+            { slug: { equals: `${trimmedSlug} `, mode: "insensitive" } },
+            { slug: { equals: trimmedSlug.replace(/-/g, "_"), mode: "insensitive" } },
+            { slug: { equals: trimmedSlug.replace(/_/g, "-"), mode: "insensitive" } },
+          ],
+        },
+        include: productInclude,
+      });
+    }
 
     // Treat DRAFT products as non-existent from the public perspective so a
     // direct URL does not leak unpublished content.

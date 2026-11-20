@@ -23,6 +23,7 @@ export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const isHome = pathname === "/";
+  const isBuildGift = pathname === "/build-gift" || pathname?.startsWith("/build-gift");
 
   // Close user dropdown when clicking outside
   useEffect(() => {
@@ -55,16 +56,29 @@ export default function Navbar() {
               </button>
             </div>
 
-            <Link href="/" aria-label="Go to home page" className="inline-flex items-center justify-center">
-              <Image
-                src="/images/seijaku-emblem-g.png"
-                alt="Seijaku emblem"
-                width={48}
-                height={48}
-                className="h-auto w-[40px] sm:w-[44px] md:w-[48px]"
-                priority
-              />
-            </Link>
+            {isBuildGift ? (
+              <span className="inline-flex items-center justify-center cursor-default">
+                <Image
+                  src="/images/seijaku-emblem-g.png"
+                  alt="Seijaku emblem"
+                  width={48}
+                  height={48}
+                  className="h-auto w-[40px] sm:w-[44px] md:w-[48px]"
+                  priority
+                />
+              </span>
+            ) : (
+              <Link href="/" aria-label="Go to home page" className="inline-flex items-center justify-center">
+                <Image
+                  src="/images/seijaku-emblem-g.png"
+                  alt="Seijaku emblem"
+                  width={48}
+                  height={48}
+                  className="h-auto w-[40px] sm:w-[44px] md:w-[48px]"
+                  priority
+                />
+              </Link>
+            )}
 
             <div className="flex items-center justify-end gap-3.5 pr-1 text-[#e0c98a] sm:gap-5 sm:pr-2 lg:pr-0">
               <button

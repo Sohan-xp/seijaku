@@ -137,30 +137,16 @@ export function getShopMaterials(): ShopMaterialFilterOption[] {
 // Matchers take a structural subset so they can consume ProductView (or any
 // caller's product shape) without forcing a circular import on product-types.
 export function matchesShopTypeFilter(
-  item: { type: ShopItemType },
+  item: { type: string },
   selectedType: ShopTypeFilterOption | "All",
 ): boolean {
   if (selectedType === "All") return true;
-  // if (selectedType === "Fragrances") return item.type === "Perfume" || item.type === "Diffuser";
-  // if (selectedType === "Body") return item.type === "Perfume";
-  // if (selectedType === "Diffusers" || selectedType === "Home Objects: Diffusers") return item.type === "Diffuser";
-  // if (selectedType === "Objects" || selectedType === "Dokra Ornaments") return item.type === "Dokra Ornament";
-  // if (selectedType === "Textiles" || selectedType === "Scarves & Squares") {
-  //   return (
-  //     item.type === "Scarf / Square" ||
-  //     item.type === "Scarf" ||
-  //     item.type === "Square" ||
-  //     item.type === "Pocket Square"
-  //   );
-  // }
-  // if (selectedType === "Gift Sets" || selectedType === "For Yourself" || selectedType === "For a Loved One") return item.type === "Ritual Box";
-  // if (selectedType === "Programs") return item.type === "Program";
-  // if (selectedType === "Retreats") return item.type === "Retreat";
-  if (selectedType === "Diffusers") return item.type === "Diffuser";
-  if (selectedType === "Dokra Ornaments") return item.type === "Dokra Ornament";
-  if (selectedType === "Textiles") return item.type === "Scarf / Square" || item.type === "Scarf" || item.type === "Square" || item.type === "Pocket Square";
-  if (selectedType === "Gift Sets") return item.type === "Ritual Box";
-  if (selectedType === "Perfumes and Fragrances") return item.type === "Perfume" || item.type === "Diffuser";
+  const t = (item.type || "").toLowerCase();
+  if (selectedType === "Diffusers") return t.includes("diffuser") || t.includes("melt");
+  if (selectedType === "Dokra Ornaments") return t.includes("dokra") || t.includes("ornament") || t.includes("brooch");
+  if (selectedType === "Textiles") return t.includes("scarf") || t.includes("square") || t.includes("textile");
+  if (selectedType === "Gift Sets") return t.includes("ritual") || t.includes("box") || t.includes("set");
+  if (selectedType === "Perfumes and Fragrances") return t.includes("perfume") || t.includes("fragrance") || t.includes("attar") || t.includes("oil");
   return false;
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getBackendBaseUrl } from "@/src/lib/backend";
 import { canonicalShopRoutes } from "@/src/lib/shop-routes";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ type ConfirmedOrder = {
 
 async function fetchOrder(orderId: string): Promise<ConfirmedOrder | null> {
   // Bypass the public BFF proxy for SSR — we're already on the server.
-  const base = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:4001";
+  const base = getBackendBaseUrl();
   try {
     const res = await fetch(`${base}/payments/orders/${encodeURIComponent(orderId)}`, {
       cache: "no-store",

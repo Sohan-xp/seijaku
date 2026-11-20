@@ -959,7 +959,7 @@ adminRouter.post(
     try {
       item = await prisma.product.create({
         data: {
-          slug: payload.slug,
+          slug: payload.slug.trim(),
           title: payload.title,
           shortDescription: payload.shortDescription,
           longDescription: payload.longDescription,
@@ -1072,7 +1072,7 @@ adminRouter.patch(
       item = await prisma.product.update({
         where: { id },
         data: {
-          ...(payload.slug !== undefined ? { slug: payload.slug } : {}),
+          ...(payload.slug !== undefined ? { slug: payload.slug.trim() } : {}),
           ...(payload.title !== undefined ? { title: payload.title } : {}),
           ...(payload.shortDescription !== undefined ? { shortDescription: payload.shortDescription } : {}),
           ...(payload.longDescription !== undefined ? { longDescription: payload.longDescription } : {}),

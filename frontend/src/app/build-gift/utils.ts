@@ -54,7 +54,7 @@ export type GiftCheckoutBundle = {
     items: GiftCheckoutItem[];
 };
 
-export const DEFAULT_MIN_GIFT_PRODUCTS = 2;
+export const DEFAULT_MIN_GIFT_PRODUCTS = 3;
 export const DEFAULT_MAX_GIFT_PRODUCTS = 3;
 
 const STORAGE_KEY_V2 = "seijaku-gift-selection-v2";
@@ -74,7 +74,12 @@ export function setStoredGiftItems(items: GiftItemSelection[]): void {
     }
 
     try {
-        window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(items));
+        if (items.length === 0) {
+            window.localStorage.removeItem(STORAGE_KEY_V2);
+            window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+        } else {
+            window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(items));
+        }
     } catch (error) {
         console.error("Unable to save gift selections to localStorage.", error);
     }
@@ -94,15 +99,20 @@ export function getStoredGiftItems(): GiftItemSelection[] {
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
-                return parsed.filter(
-                    (item): item is GiftItemSelection =>
-                        Boolean(
-                            item &&
-                                typeof item === "object" &&
-                                typeof item.productId === "string" &&
-                                item.productId,
-                        ),
-                );
+                return parsed
+                    .filter(
+                        (item): item is GiftItemSelection =>
+                            Boolean(
+                                item &&
+                                    typeof item === "object" &&
+                                    typeof item.productId === "string" &&
+                                    item.productId,
+                            ),
+                    )
+                    .map((item) => ({
+                        ...item,
+                        instanceId: item.instanceId || generateInstanceId(),
+                    }));
             }
         }
 

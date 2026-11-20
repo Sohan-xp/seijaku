@@ -1,6 +1,9 @@
 import type { CacheTag } from "@/src/lib/cache-tags";
 
-const DEFAULT_BACKEND_URL = "http://localhost:4001";
+const DEFAULT_BACKEND_URL =
+  process.env.NODE_ENV === "development" && process.env.USE_LOCAL_BACKEND === "true"
+    ? "http://localhost:4001"
+    : "https://seijaku-backend.onrender.com";
 const DEFAULT_PUBLIC_REVALIDATE_SECONDS = 60;
 
 export function getBackendBaseUrl() {

@@ -175,7 +175,7 @@ export function normalizeBackendProduct(b: BackendProduct): ProductView | null {
 
   return {
     id: b.id,
-    slug: b.slug,
+    slug: b.slug.trim(),
     title: b.title,
     heightCm: b.heightCm,
     weightGrams: b.weightGrams,
@@ -245,16 +245,30 @@ export async function fetchProducts(options?: PublicFetchOptions): Promise<Produ
 // record or the slug is missing. Throws on transport failure — callers in
 // server components can let that bubble to Next's error boundary.
 export async function fetchProductBySlug(slug: string): Promise<ProductView | null> {
+  const cleanSlug = slug.trim();
   try {
     // Backend wraps the product in { item: ... }; unwrap before normalizing
     // or normalizeBackendProduct sees missing fields and returns null.
     const { item } = await publicBackendJson<{ item: BackendProduct }>(
-      `/catalog/products/${encodeURIComponent(slug)}`,
+      `/catalog/products/${encodeURIComponent(cleanSlug)}`,
       { tags: [cacheTags.products] },
     );
     return normalizeBackendProduct(item);
   } catch {
-    return null;
+    // Fallback: search the product catalog for matching slug or hyphen/underscore variations
+    try {
+      const all = await fetchProducts();
+      const match = all.find(
+        (p) =>
+          p.slug === cleanSlug ||
+          p.slug.toLowerCase() === cleanSlug.toLowerCase() ||
+          p.slug.replace(/_/g, "-") === cleanSlug.replace(/_/g, "-") ||
+          p.slug.replace(/-/g, "_") === cleanSlug.replace(/-/g, "_"),
+      );
+      return match ?? null;
+    } catch {
+      return null;
+    }
   }
 }
 

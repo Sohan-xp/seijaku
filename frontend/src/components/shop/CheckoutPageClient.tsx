@@ -47,6 +47,23 @@ type CheckoutLineItem = {
   heightCm?: number | null;
 };
 
+type FormField =
+  | "name"
+  | "email"
+  | "phone"
+  | "shippingLine1"
+  | "shippingCity"
+  | "shippingState"
+  | "shippingPincode";
+
+function isValidEmail(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed) return false;
+  return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(
+    trimmed
+  );
+}
+
 export default function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,6 +121,70 @@ export default function CheckoutPageClient() {
   const [shippingPincode, setShippingPincode] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FormField, string>>>({});
+
+  const clearFieldError = (field: FormField) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setError(null);
+  };
+
+  const validateForm = () => {
+    const errors: Partial<Record<FormField, string>> = {};
+
+    // Name
+    if (!name.trim()) {
+      errors.name = "Please enter your full name.";
+    } else if (name.trim().length < 2) {
+      errors.name = "Full name must be at least 2 characters.";
+    }
+
+    // Email
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      errors.email = "Please enter your email address.";
+    } else if (!isValidEmail(trimmedEmail)) {
+      errors.email = "Please enter a valid email address (e.g. name@example.com).";
+    }
+
+    // Phone
+    const trimmedPhone = phone.trim();
+    const phoneDigits = trimmedPhone.replace(/\D/g, "");
+    if (!trimmedPhone) {
+      errors.phone = "Please enter your phone number.";
+    } else if (phoneDigits.length < 10) {
+      errors.phone = "Please enter a valid 10-digit phone number.";
+    }
+
+    // Shipping address line 1
+    if (!shippingLine1.trim()) {
+      errors.shippingLine1 = "Please enter your delivery address (Flat, House, Street).";
+    }
+
+    // City
+    if (!shippingCity.trim()) {
+      errors.shippingCity = "Please enter your city.";
+    }
+
+    // State
+    if (!shippingState.trim()) {
+      errors.shippingState = "Please enter your state.";
+    }
+
+    // Pincode
+    const trimmedPincode = shippingPincode.trim();
+    if (!trimmedPincode) {
+      errors.shippingPincode = "Please enter your 6-digit pincode.";
+    } else if (!/^[0-9]{6}$/.test(trimmedPincode)) {
+      errors.shippingPincode = "Pincode must be exactly 6 digits.";
+    }
+
+    return errors;
+  };
   const [isPending, startTransition] = useTransition();
   const [shippingCost, setShippingCost] = useState<number | null>(null);
   const [estimatedDeliveryDays, setEstimatedDeliveryDays] = useState<string | null>(null);
@@ -551,75 +632,233 @@ export default function CheckoutPageClient() {
             {/* Customer & Address Form */}
             <div className="mt-8 space-y-4">
               <div className="grid gap-3.5">
-                <input
-                  type="text"
-                  placeholder="Your full name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
-                />
-                <input
-                  type="email"
-                  placeholder="Your email address"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
-                />
-                <input
-                  type="tel"
-                  placeholder="Phone number (+91...)"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
-                />
-                <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-[#8d7d6d]">Shipping Address</p>
-                <input
-                  type="text"
-                  placeholder="Address line 1 (Flat, House, Street)"
-                  value={shippingLine1}
-                  onChange={(event) => setShippingLine1(event.target.value)}
-                  className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
-                />
-                <input
-                  type="text"
-                  placeholder="Address line 2 (Landmark, Area - optional)"
-                  value={shippingLine2}
-                  onChange={(event) => setShippingLine2(event.target.value)}
-                  className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
-                />
-                <div className="grid gap-3.5 sm:grid-cols-2">
+                <div>
                   <input
                     type="text"
-                    placeholder="City"
-                    value={shippingCity}
-                    onChange={(event) => setShippingCity(event.target.value)}
-                    className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      clearFieldError("name");
+                    }}
+                    onBlur={() => {
+                      if (!name.trim()) {
+                        setFieldErrors((prev) => ({ ...prev, name: "Please enter your full name." }));
+                      } else if (name.trim().length < 2) {
+                        setFieldErrors((prev) => ({ ...prev, name: "Full name must be at least 2 characters." }));
+                      }
+                    }}
+                    className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                      fieldErrors.name
+                        ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                        : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                    }`}
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                      {fieldErrors.name}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    type="email"
+                    placeholder="Your email address"
+                    value={email}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      clearFieldError("email");
+                    }}
+                    onBlur={() => {
+                      const trimmed = email.trim();
+                      if (!trimmed) {
+                        setFieldErrors((prev) => ({ ...prev, email: "Please enter your email address." }));
+                      } else if (!isValidEmail(trimmed)) {
+                        setFieldErrors((prev) => ({ ...prev, email: "Please enter a valid email address (e.g. name@example.com)." }));
+                      }
+                    }}
+                    className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                      fieldErrors.email
+                        ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                        : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                    }`}
+                  />
+                  {fieldErrors.email && (
+                    <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                      {fieldErrors.email}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    type="tel"
+                    placeholder="Phone number (+91...)"
+                    value={phone}
+                    onChange={(event) => {
+                      setPhone(event.target.value);
+                      clearFieldError("phone");
+                    }}
+                    onBlur={() => {
+                      const trimmed = phone.trim();
+                      const digits = trimmed.replace(/\D/g, "");
+                      if (!trimmed) {
+                        setFieldErrors((prev) => ({ ...prev, phone: "Please enter your phone number." }));
+                      } else if (digits.length < 10) {
+                        setFieldErrors((prev) => ({ ...prev, phone: "Please enter a valid 10-digit phone number." }));
+                      }
+                    }}
+                    className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                      fieldErrors.phone
+                        ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                        : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                    }`}
+                  />
+                  {fieldErrors.phone && (
+                    <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                      {fieldErrors.phone}
+                    </p>
+                  )}
+                </div>
+
+                <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-[#8d7d6d]">Shipping Address</p>
+
+                <div>
                   <input
                     type="text"
-                    placeholder="State"
-                    value={shippingState}
-                    onChange={(event) => setShippingState(event.target.value)}
+                    placeholder="Address line 1 (Flat, House, Street)"
+                    value={shippingLine1}
+                    onChange={(event) => {
+                      setShippingLine1(event.target.value);
+                      clearFieldError("shippingLine1");
+                    }}
+                    onBlur={() => {
+                      if (!shippingLine1.trim()) {
+                        setFieldErrors((prev) => ({ ...prev, shippingLine1: "Please enter your delivery address." }));
+                      }
+                    }}
+                    className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                      fieldErrors.shippingLine1
+                        ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                        : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                    }`}
+                  />
+                  {fieldErrors.shippingLine1 && (
+                    <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                      {fieldErrors.shippingLine1}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Address line 2 (Landmark, Area - optional)"
+                    value={shippingLine2}
+                    onChange={(event) => setShippingLine2(event.target.value)}
                     className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
                   />
                 </div>
+
                 <div className="grid gap-3.5 sm:grid-cols-2">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="Pincode (6 digits)"
-                    value={shippingPincode}
-                    onChange={(event) => setShippingPincode(event.target.value.replace(/[^0-9]/g, ""))}
-                    className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#faf7f1] px-4 py-3 text-[14px] text-[#2f2924] outline-none focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
-                  />
-                  <input
-                    type="text"
-                    value="India"
-                    readOnly
-                    aria-readonly
-                    className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#ece5d9] px-4 py-3 text-[14px] text-[#736a5f] outline-none"
-                  />
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="City"
+                      value={shippingCity}
+                      onChange={(event) => {
+                        setShippingCity(event.target.value);
+                        clearFieldError("shippingCity");
+                      }}
+                      onBlur={() => {
+                        if (!shippingCity.trim()) {
+                          setFieldErrors((prev) => ({ ...prev, shippingCity: "Please enter your city." }));
+                        }
+                      }}
+                      className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                        fieldErrors.shippingCity
+                          ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                          : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                      }`}
+                    />
+                    {fieldErrors.shippingCity && (
+                      <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                        {fieldErrors.shippingCity}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="State"
+                      value={shippingState}
+                      onChange={(event) => {
+                        setShippingState(event.target.value);
+                        clearFieldError("shippingState");
+                      }}
+                      onBlur={() => {
+                        if (!shippingState.trim()) {
+                          setFieldErrors((prev) => ({ ...prev, shippingState: "Please enter your state." }));
+                        }
+                      }}
+                      className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                        fieldErrors.shippingState
+                          ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                          : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                      }`}
+                    />
+                    {fieldErrors.shippingState && (
+                      <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                        {fieldErrors.shippingState}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-3.5 sm:grid-cols-2">
+                  <div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="Pincode (6 digits)"
+                      value={shippingPincode}
+                      onChange={(event) => {
+                        setShippingPincode(event.target.value.replace(/[^0-9]/g, ""));
+                        clearFieldError("shippingPincode");
+                      }}
+                      onBlur={() => {
+                        const trimmed = shippingPincode.trim();
+                        if (!trimmed) {
+                          setFieldErrors((prev) => ({ ...prev, shippingPincode: "Please enter your 6-digit pincode." }));
+                        } else if (!/^[0-9]{6}$/.test(trimmed)) {
+                          setFieldErrors((prev) => ({ ...prev, shippingPincode: "Pincode must be exactly 6 digits." }));
+                        }
+                      }}
+                      className={`w-full rounded-[18px] border px-4 py-3 text-[14px] text-[#2f2924] outline-none transition-colors ${
+                        fieldErrors.shippingPincode
+                          ? "border-[#c53929] bg-[#fff8f6] focus:border-[#c53929] focus:ring-2 focus:ring-[#c53929]/15"
+                          : "border-[#cfc3b4] bg-[#faf7f1] focus:border-[#2e4a36] focus:ring-2 focus:ring-[#2e4a36]/15"
+                      }`}
+                    />
+                    {fieldErrors.shippingPincode && (
+                      <p className="mt-1 px-1 text-[11px] font-medium text-[#c53929]">
+                        {fieldErrors.shippingPincode}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      value="India"
+                      readOnly
+                      aria-readonly
+                      className="w-full rounded-[18px] border border-[#cfc3b4] bg-[#ece5d9] px-4 py-3 text-[14px] text-[#736a5f] outline-none"
+                    />
+                  </div>
                 </div>
                 {isGiftMode && (
                   <div>
@@ -656,20 +895,12 @@ export default function CheckoutPageClient() {
                     setNotice(null);
                     setError(null);
 
-                    if (!name.trim() || !email.trim() || !phone.trim()) {
-                      setError("Please fill in your name, email, and phone.");
-                      return;
-                    }
-                    if (
-                      !shippingLine1.trim() ||
-                      !shippingCity.trim() ||
-                      !shippingState.trim()
-                    ) {
-                      setError("Please complete your shipping address.");
-                      return;
-                    }
-                    if (!/^[0-9]{6}$/.test(shippingPincode)) {
-                      setError("Pincode must be 6 digits.");
+                    const validationErrors = validateForm();
+                    const errorKeys = Object.keys(validationErrors) as FormField[];
+                    if (errorKeys.length > 0) {
+                      setFieldErrors(validationErrors);
+                      const firstError = validationErrors[errorKeys[0]];
+                      setError(firstError || "Please check the highlighted details.");
                       return;
                     }
 
@@ -741,8 +972,39 @@ export default function CheckoutPageClient() {
                     }
 
                     if (!orderRes.ok) {
-                      const data = (await orderRes.json().catch(() => null)) as { error?: string } | null;
-                      setError(data?.error ?? "Unable to start payment. Please try again.");
+                      const data = (await orderRes.json().catch(() => null)) as {
+                        error?: string;
+                        issues?: {
+                          fieldErrors?: Record<string, string[]>;
+                        };
+                      } | null;
+
+                      if (data?.issues?.fieldErrors) {
+                        const backendFieldErrors: Partial<Record<FormField, string>> = {};
+                        for (const [key, msgs] of Object.entries(data.issues.fieldErrors)) {
+                          if (msgs && msgs.length > 0) {
+                            if (key === "email") backendFieldErrors.email = "Please enter a valid email address.";
+                            else if (key === "name") backendFieldErrors.name = "Please enter your full name.";
+                            else if (key === "phone") backendFieldErrors.phone = "Please enter a valid phone number.";
+                            else if (key === "shippingLine1") backendFieldErrors.shippingLine1 = "Please enter your delivery address.";
+                            else if (key === "shippingCity") backendFieldErrors.shippingCity = "Please enter your city.";
+                            else if (key === "shippingState") backendFieldErrors.shippingState = "Please enter your state.";
+                            else if (key === "shippingPincode") backendFieldErrors.shippingPincode = msgs[0] || "Pincode must be exactly 6 digits.";
+                          }
+                        }
+                        if (Object.keys(backendFieldErrors).length > 0) {
+                          setFieldErrors((prev) => ({ ...prev, ...backendFieldErrors }));
+                          const firstMsg = Object.values(backendFieldErrors)[0] || "Please check the highlighted details.";
+                          setError(firstMsg);
+                          return;
+                        }
+                      }
+
+                      if (data?.error === "Validation failed") {
+                        setError("Please verify all details and enter a valid email address and phone number.");
+                      } else {
+                        setError(data?.error ?? "Unable to start payment. Please try again.");
+                      }
                       return;
                     }
                     const order = (await orderRes.json()) as CreateOrderResponse;
@@ -794,6 +1056,7 @@ export default function CheckoutPageClient() {
                             setShippingCity("");
                             setShippingState("");
                             setShippingPincode("");
+                            setFieldErrors({});
                             router.push(`/checkout/order-confirmed?order=${order.orderId}${isGiftMode ? "&gift=true" : ""}`);
                           } else {
                             setError(

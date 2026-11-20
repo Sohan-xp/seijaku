@@ -1,14 +1,16 @@
 "use client";
 import type { ProductView } from "@/src/lib/product-types";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react";
 import ProductDrawer from "./ProductDrawer";
-import { useShopState } from "@/src/components/shop/ShopStateProvider";
+import { useShopState, isGiftCartItem } from "@/src/components/shop/ShopStateProvider";
 import {
     DEFAULT_MAX_GIFT_PRODUCTS,
     DEFAULT_MIN_GIFT_PRODUCTS,
     clearStoredGiftItems,
+    clearGiftCheckoutBundle,
     generateInstanceId,
     getGiftCheckoutBundle,
     getStoredGiftItems,
@@ -94,7 +96,69 @@ function isProductForStep(product: ProductView, stepKey: GiftStepKey): boolean {
     if (product.bridgeCategory) {
         return product.bridgeCategory === stepKey;
     }
-    return false;
+
+    const typeStr = (product.type || "").toLowerCase();
+    const materialStr = (product.material || "").toLowerCase();
+    const slugStr = (product.slug || "").toLowerCase();
+    const titleStr = (product.title || "").toLowerCase();
+    const descStr = (product.shortDescription || "").toLowerCase();
+    const allText = `${typeStr} ${materialStr} ${slugStr} ${titleStr} ${descStr}`;
+
+    switch (stepKey) {
+        case "scarves-and-squares":
+            return (
+                typeStr.includes("scarf") ||
+                typeStr.includes("square") ||
+                slugStr.includes("scarf") ||
+                slugStr.includes("square") ||
+                slugStr.includes("modal-silk") ||
+                materialStr.includes("textile")
+            );
+
+        case "perfumes":
+            if (
+                slugStr.includes("diffuser") ||
+                typeStr.includes("diffuser") ||
+                typeStr.includes("wax melt")
+            ) {
+                return false;
+            }
+            return (
+                typeStr.includes("perfume") ||
+                typeStr.includes("fragrance") ||
+                slugStr.includes("perfume") ||
+                slugStr.includes("trilogy") ||
+                slugStr.includes("textile-oil") ||
+                slugStr.includes("breath-of-pines") ||
+                slugStr.includes("summer-held-close") ||
+                slugStr.includes("morning-desk") ||
+                materialStr.includes("botanical fragrance")
+            );
+
+        case "dokra-ornaments":
+            return (
+                typeStr.includes("dokra") ||
+                typeStr.includes("ornament") ||
+                materialStr.includes("dokra") ||
+                slugStr.includes("dokra") ||
+                slugStr.includes("brooch") ||
+                slugStr.includes("handfan") ||
+                slugStr.includes("bell-brooch") ||
+                slugStr.includes("conch-brooch") ||
+                allText.includes("dokra")
+            );
+
+        case "diffusers":
+            return (
+                typeStr.includes("diffuser") ||
+                typeStr.includes("wax melt") ||
+                slugStr.includes("diffuser") ||
+                slugStr.includes("wax-melt") ||
+                slugStr.includes("vessel") ||
+                slugStr.includes("room-stone") ||
+                slugStr.includes("stone-oil")
+            );
+    }
 }
 function productsForStep(products: ProductView[], step: GiftStepKey): ProductView[] {
     return products.filter((product) => isProductForStep(product, step));
@@ -103,38 +167,25 @@ function Stepper({
     current,
     countsByStep,
     canAccessReview,
-    isFull,
     onGo,
 }: {
     current: number;
     countsByStep: Record<GiftStepKey, number>;
     canAccessReview: boolean;
-    isFull: boolean;
     onGo: (index: number) => void;
 }) {
-    const stepsWithReview = [
-        ...STEPS.map((step, idx) => ({
-            label: step.shortLabel,
-            fullLabel: step.label,
-            isReview: false,
-            count: countsByStep[step.key] ?? 0,
-            index: idx,
-        })),
-        {
-            label: REVIEW_LABEL,
-            fullLabel: REVIEW_LABEL,
-            isReview: true,
-            count: 0,
-            index: STEPS.length,
-        },
-    ];
+    const steps = STEPS.map((step, idx) => ({
+        label: step.shortLabel,
+        fullLabel: step.label,
+        count: countsByStep[step.key] ?? 0,
+        index: idx,
+    }));
     return (
         <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 sm:gap-x-3">
-            {stepsWithReview.map((item, index) => {
+            {steps.map((item, index) => {
                 const active = index === current;
                 const hasSelections = !item.isReview && item.count > 0;
-                // const isClickable = !item.isReview || canAccessReview || current === STEPS.length;
-                const isClickable = item.isReview ? (canAccessReview || current === STEPS.length) : (index <= current || !isFull);
+                const isClickable = !item.isReview || canAccessReview || current === STEPS.length;
                 const content = (
                     <span className="flex items-center gap-1.5">
                         <span
@@ -149,10 +200,10 @@ function Stepper({
                         </span>
                         <span
                             className={`hidden font-sans text-[10px] tracking-wide sm:inline ${active
-                                ? "font-medium text-[#2A1D1B]"
-                                : isClickable
-                                    ? "text-[#54433D]"
-                                    : "text-[#8C7A6E]/70"
+                                    ? "font-medium text-[#2A1D1B]"
+                                    : isClickable
+                                        ? "text-[#54433D]"
+                                        : "text-[#8C7A6E]/70"
                                 }`}
                         >
                             {item.label}
@@ -265,14 +316,11 @@ function GiftSidebar({
     minProducts,
     maxProducts,
     total,
+    isSubmitting,
     onContinue,
     onGoToStep,
     onRemoveItem,
     onProceedToReview,
-    // next 
-    previousVisitedStepIndex,
-    onGoBack,
-
 }: {
     items: ResolvedGiftItem[];
     currentStepIndex: number;
@@ -280,18 +328,14 @@ function GiftSidebar({
     minProducts: number;
     maxProducts: number;
     total: number;
+    isSubmitting: boolean;
     onContinue: () => void;
     onGoToStep: (index: number) => void;
     onRemoveItem: (instanceId: string) => void;
     onProceedToReview: () => void;
-
-    //next
-
-    previousVisitedStepIndex: number | null;
-    onGoBack: () => void;
 }) {
     const currentStepConfig = STEPS[currentStepIndex];
-    const canReview = selectedCount >= minProducts;
+    const canCheckout = selectedCount >= minProducts && selectedCount <= maxProducts;
     const isFull = selectedCount >= maxProducts;
     return (
         <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-24 xl:self-start">
@@ -300,8 +344,8 @@ function GiftSidebar({
                     <h3 className="text-[18px] font-normal">Your Gift Box</h3>
                     <span
                         className={`font-sans text-[10px] font-medium px-2 py-0.5 rounded-full ${canReview
-                            ? "bg-[#4A6350]/15 text-[#2B3B2F]"
-                            : "bg-[#8A483B]/10 text-[#8A483B]"
+                                ? "bg-[#4A6350]/15 text-[#2B3B2F]"
+                                : "bg-[#8A483B]/10 text-[#8A483B]"
                             }`}
                     >
                         {selectedCount}/{maxProducts} items {isFull ? "(Full)" : `(min. ${minProducts})`}
@@ -312,7 +356,9 @@ function GiftSidebar({
                         <div className="rounded-lg border border-dashed border-[#E3D4C4] p-4 text-center font-sans text-[12px] text-[#7A6A5E]">
                             <p className="font-medium text-[#4C413A]">Box is empty</p>
                             <p className="mt-1 text-[11px]">
-                                Add {minProducts} to {maxProducts} products from any section.
+                                {minProducts === maxProducts
+                                    ? `Add ${minProducts} products from any section.`
+                                    : `Add ${minProducts} to ${maxProducts} products from any section.`}
                             </p>
                         </div>
                     ) : (
@@ -356,7 +402,7 @@ function GiftSidebar({
                                             )}
                                             <button
                                                 type="button"
-                                                onClick={() => onRemoveItem(item.instanceId)}
+                                                onClick={() => onRemoveItem(item.instanceId, item.productId)}
                                                 className="text-[#8A483B] underline hover:text-[#64291F]"
                                             >
                                                 Remove
@@ -390,65 +436,39 @@ function GiftSidebar({
                         </span>
                     </div>
                     <div className="mt-3 flex flex-col gap-2">
-                        {canReview && (
+                        {canCheckout ? (
                             <button
                                 type="button"
-                                onClick={onProceedToReview}
-                                className="flex h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-[#2B3B2F] font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-[#F6EEE4] transition-all hover:bg-[#1E2B22] shadow-sm"
+                                onClick={onCheckout}
+                                disabled={isSubmitting}
+                                className="flex h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-[#2B3B2F] font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-[#F6EEE4] transition-all hover:bg-[#1E2B22] shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <span>Review Gift Box ({selectedCount} items)</span>
+                                <span>
+                                    {isSubmitting ? "Processing..." : "Proceed to Checkout"}
+                                </span>
                                 <span aria-hidden>→</span>
                             </button>
                         )}
-                        {/* {currentStepIndex < STEPS.length - 1 && (
-                            <button
-                                type="button"
-                                onClick={onContinue}
-                                className={`flex h-[42px] w-full items-center justify-center gap-2 rounded-lg font-sans text-[11px] font-medium uppercase tracking-[0.16em] transition-all ${
-                                    canReview
-                                        ? "border border-[#4A6350] bg-transparent text-[#2B3B2F] hover:bg-[#4A6350]/10"
-                                        : "bg-[#4A6350] text-[#F6EEE4] hover:bg-[#3E5544]"
-                                }`}
-                            >
-                                <span>Next: {STEPS[currentStepIndex + 1].shortLabel} →</span>
-                            </button>
-                        )} */}
-                        {/* disable the button if the produict >= 3 */}
                         {currentStepIndex < STEPS.length - 1 && (
                             <button
                                 type="button"
                                 onClick={onContinue}
-                                disabled={isFull}
-                                className={`flex h-[42px] w-full items-center justify-center gap-2 rounded-lg font-sans text-[11px] font-medium uppercase tracking-[0.16em] transition-all ${isFull
-                                    ? "cursor-not-allowed border border-[#4A6350]/30 bg-transparent text-[#2B3B2F]/40"
-                                    : canReview
+                                className={`flex h-[42px] w-full items-center justify-center gap-2 rounded-lg font-sans text-[11px] font-medium uppercase tracking-[0.16em] transition-all ${canCheckout
                                         ? "border border-[#4A6350] bg-transparent text-[#2B3B2F] hover:bg-[#4A6350]/10"
                                         : "bg-[#4A6350] text-[#F6EEE4] hover:bg-[#3E5544]"
                                     }`}
                             >
-                                <span>{isFull ? "Gift Box Full" : `Next: ${STEPS[currentStepIndex + 1].shortLabel} →`}</span>
+                                <span>Next: {STEPS[currentStepIndex + 1].shortLabel} →</span>
                             </button>
                         )}
-
-                        {previousVisitedStepIndex !== null && (
-                            <button
-                                type="button"
-                                onClick={onGoBack}
-                                className="flex h-[42px] w-full items-center justify-center gap-2 rounded-lg border border-[#C8B8A5] bg-[#FBF8F2] font-sans text-[11px] font-medium uppercase tracking-[0.12em] text-[#4A6350] transition-colors hover:bg-[#EDE5D8]"
-                            >
-                                <span aria-hidden="true">←</span>
-                                <span>
-                                    Back to {previousVisitedStepIndex === STEPS.length
-                                        ? REVIEW_LABEL
-                                        : STEPS[previousVisitedStepIndex].shortLabel}
-                                </span>
-                            </button>
-                        )}
-
-
                         {!canReview && (
                             <p className="text-center font-sans text-[10px] text-[#8A483B]">
-                                Add {minProducts - selectedCount} more item{minProducts - selectedCount > 1 ? "s" : ""} to proceed to review
+                                Add {minProducts - selectedCount} more item{minProducts - selectedCount > 1 ? "s" : ""} to proceed to checkout
+                            </p>
+                        )}
+                        {selectedCount > maxProducts && (
+                            <p className="text-center font-sans text-[10px] text-[#8A483B]">
+                                Maximum {maxProducts} items allowed. Please remove {selectedCount - maxProducts} item{selectedCount - maxProducts > 1 ? "s" : ""}.
                             </p>
                         )}
                     </div>
@@ -479,7 +499,7 @@ function GiftReview({
     isSubmitting: boolean;
     onAddToBag: () => void;
     onCheckout: () => void;
-    onRemoveItem: (instanceId: string) => void;
+    onRemoveItem: (instanceId: string, fallbackProductId?: string) => void;
     onGoToStep: (index: number) => void;
 }) {
     const validItems = items.filter(
@@ -537,7 +557,7 @@ function GiftReview({
                                         <div className="mt-2 flex items-center justify-center gap-2 font-sans text-[10px]">
                                             <button
                                                 type="button"
-                                                onClick={() => onRemoveItem(item.instanceId)}
+                                                onClick={() => onRemoveItem(item.instanceId, item.stepIndex >= 0 ? validItems[index]?.productId : undefined)}
                                                 className="inline-flex items-center gap-1 text-[#8A483B] hover:underline"
                                             >
                                                 <Trash2 size={11} />
@@ -631,7 +651,7 @@ function GiftReview({
                                     <div className="mt-1 flex items-center gap-2 text-[10px]">
                                         <button
                                             type="button"
-                                            onClick={() => onRemoveItem(item.instanceId)}
+                                            onClick={() => onRemoveItem(item.instanceId, item.productId)}
                                             className="text-[#8A483B] underline hover:text-[#64291F]"
                                         >
                                             Remove
@@ -699,6 +719,38 @@ function GiftReview({
         </div>
     );
 }
+
+function buildGiftCheckoutItems(validItems: (ResolvedGiftItem & { product: ProductView })[]): GiftCheckoutItem[] {
+    return validItems.map((item) => {
+        const categoryLabel = item.stepConfig.label;
+        const optionLabel = item.options?.label;
+        const variantLabel = optionLabel
+            ? `[Gift Box · ${categoryLabel}] ${optionLabel}`
+            : `[Gift Box · ${categoryLabel}]`;
+        const selectedOptions: Record<string, string> = {
+            ...(item.options?.options || {}),
+            "Gift Category": categoryLabel,
+            "Gift Packaging": "Festive Gift Box & Handwritten Card",
+        };
+        return {
+            productSlug: item.product.slug,
+            title: item.product.title,
+            unitPrice: item.product.price,
+            priceLabel: item.product.priceLabel,
+            quantity: 1,
+            image: item.product.image,
+            shortDescription: item.product.shortDescription,
+            variantLabel,
+            selectedOptions,
+            categoryName: categoryLabel,
+            weightGrams: item.product.weightGrams,
+            lengthCm: item.product.lengthCm,
+            breadthCm: item.product.breadthCm,
+            heightCm: item.product.heightCm,
+        };
+    });
+}
+
 export default function BuildGiftClient({
     products,
     minProducts = DEFAULT_MIN_GIFT_PRODUCTS,
@@ -709,7 +761,11 @@ export default function BuildGiftClient({
     maxProducts?: number;
 }) {
     const router = useRouter();
-    const { addToCart, openCart, clearCheckout } = useShopState();
+    const { addToCart, openCart, clearCheckout, cart, syncGiftBundleToCart } = useShopState();
+    const hydratedRef = useRef(false);
+    const cartRef = useRef(cart);
+    cartRef.current = cart;
+
     const [stepIndex, setStepIndex] = useState(0);
     const [giftItems, setGiftItems] = useState<GiftItemSelection[]>([]);
     const [savedLoaded, setSavedLoaded] = useState(false);
@@ -726,14 +782,16 @@ export default function BuildGiftClient({
     );
     const [visitHistory, setVisitHistory] = useState<number[]>([]);
     /*
-     * Hydrate saved selections once from storage.
+     * Hydrate saved selections once from storage or active cart.
      */
     useEffect(() => {
-        if (savedLoaded || products.length === 0) return;
+        if (hydratedRef.current || products.length === 0) return;
+        hydratedRef.current = true;
+
         let stored = getStoredGiftItems();
         // Discard any items with unknown product IDs
         let valid = stored.filter((item) => productsById.has(item.productId));
-        // Fallback: If draft was empty, recover selections from active gift checkout bundle
+        // Fallback 1: If draft was empty, recover selections from active gift checkout bundle
         if (valid.length === 0) {
             const bundle = getGiftCheckoutBundle();
             if (bundle && bundle.items && bundle.items.length > 0) {
@@ -758,19 +816,126 @@ export default function BuildGiftClient({
                 }
             }
         }
-        setGiftItems(valid);
-        if (valid.length >= minProducts) {
-            setStepIndex(STEPS.length); // Open directly on Review screen so user sees their gift box
+        // Fallback 2: If still empty, check if cart contains gift items (e.g. across login sessions)
+        const currentCart = cartRef.current;
+        if (valid.length === 0 && currentCart && currentCart.length > 0) {
+            const giftCartItems = currentCart.filter(isGiftCartItem);
+            if (giftCartItems.length > 0) {
+                const recoveredFromCart: GiftItemSelection[] = [];
+                for (const cItem of giftCartItems) {
+                    const matchProduct = products.find((p) => p.slug === cItem.productSlug);
+                    if (matchProduct) {
+                        const stepKey =
+                            STEPS.find((s) => s.label === cItem.selectedOptions?.["Gift Category"])?.key ?? "scarves-and-squares";
+                        for (let q = 0; q < (cItem.quantity || 1); q++) {
+                            recoveredFromCart.push({
+                                instanceId: generateInstanceId(),
+                                productId: matchProduct.id,
+                                stepKey,
+                                options: cItem.selectedOptions
+                                    ? { label: cItem.variantLabel || "", options: cItem.selectedOptions }
+                                    : null,
+                            });
+                        }
+                    }
+                }
+                if (recoveredFromCart.length > 0) {
+                    valid = recoveredFromCart;
+                }
+            }
         }
+        // Guarantee each item always has a valid instanceId
+        valid = valid.map((item) => ({
+            ...item,
+            instanceId: item.instanceId || generateInstanceId(),
+        }));
+        setGiftItems(valid);
         setSavedLoaded(true);
-    }, [products, productsById, savedLoaded, minProducts, maxProducts]);
+    }, [products, productsById]);
+
     /*
-     * Keep storage in sync with active gift items.
+     * Listen for gift items removed or cleared from global CartDrawer
+     */
+    useEffect(() => {
+        function handleGiftCartRemoved(e: Event) {
+            const customEvent = e as CustomEvent<{ productSlug?: string }>;
+            const slug = customEvent.detail?.productSlug;
+            if (!slug) return;
+            const matchingProduct = products.find((p) => p.slug === slug);
+            if (matchingProduct) {
+                removeProductOne(matchingProduct);
+            }
+        }
+        function handleGiftCartCleared() {
+            setGiftItems([]);
+            clearGiftCheckoutBundle();
+        }
+        if (typeof window !== "undefined") {
+            window.addEventListener("seijaku-gift-cart-removed", handleGiftCartRemoved);
+            window.addEventListener("seijaku-gift-cart-cleared", handleGiftCartCleared);
+            return () => {
+                window.removeEventListener("seijaku-gift-cart-removed", handleGiftCartRemoved);
+                window.removeEventListener("seijaku-gift-cart-cleared", handleGiftCartCleared);
+            };
+        }
+    }, [products]);
+
+    /*
+     * Keep storage, gift checkout bundle, and global cart in sync with active gift items.
      */
     useEffect(() => {
         if (!savedLoaded) return;
+
+        // 1. Sync gift items to builder localStorage
         setStoredGiftItems(giftItems);
-    }, [savedLoaded, giftItems]);
+
+        // 2. Filter valid resolved items
+        const validItems = giftItems
+            .map((item) => ({
+                ...item,
+                product: productsById.get(item.productId) ?? null,
+                stepConfig: STEPS.find((s) => s.key === item.stepKey) ?? STEPS[0],
+            }))
+            .filter((item): item is ResolvedGiftItem & { product: ProductView } => item.product !== null);
+
+        // 3. When empty: clear checkout bundle and remove gift items from cart
+        if (validItems.length === 0) {
+            clearGiftCheckoutBundle();
+            syncGiftBundleToCart([]);
+            return;
+        }
+
+        // 4. When non-empty: build checkout items & bundle
+        const checkoutItems = buildGiftCheckoutItems(validItems);
+        const currentTotal = validItems.reduce((sum, item) => sum + item.product.price, 0);
+        const bundle: GiftCheckoutBundle = {
+            isGift: true,
+            packaging: "festive",
+            packagingTitle: "Festive Gift Box Packaging & Handwritten Card",
+            total: currentTotal,
+            items: checkoutItems,
+        };
+        setGiftCheckoutBundle(bundle);
+
+        // 5. Sync to global cart (Navbar badge, CartDrawer, backend if logged in)
+        const cartPayloads = checkoutItems.map((item) => ({
+            productSlug: item.productSlug,
+            title: item.title,
+            unitPrice: item.unitPrice,
+            priceLabel: item.priceLabel,
+            quantity: 1,
+            image: item.image,
+            shortDescription: item.shortDescription,
+            variantLabel: item.variantLabel,
+            selectedOptions: item.selectedOptions,
+            weightGrams: item.weightGrams,
+            lengthCm: item.lengthCm,
+            breadthCm: item.breadthCm,
+            heightCm: item.heightCm,
+        }));
+        syncGiftBundleToCart(cartPayloads);
+    }, [savedLoaded, giftItems, productsById, syncGiftBundleToCart]);
+
     const selectedCount = giftItems.length;
     const canAddMore = selectedCount < maxProducts;
     const canAccessReview = selectedCount >= minProducts;
@@ -847,8 +1012,24 @@ export default function BuildGiftClient({
         });
         setAdded(false);
     }
-    function removeItemByInstanceId(instanceId: string) {
-        setGiftItems((prev) => prev.filter((i) => i.instanceId !== instanceId));
+    function removeItemByInstanceId(instanceId: string, fallbackProductId?: string) {
+        setGiftItems((prev) => {
+            if (instanceId) {
+                const next = prev.filter((i) => i.instanceId && i.instanceId !== instanceId);
+                if (next.length < prev.length) {
+                    return next;
+                }
+            }
+            if (fallbackProductId) {
+                const index = prev.findIndex((i) => i.productId === fallbackProductId);
+                if (index !== -1) {
+                    const copy = [...prev];
+                    copy.splice(index, 1);
+                    return copy;
+                }
+            }
+            return prev;
+        });
         setAdded(false);
     }
     // function goTo(index: number) {
@@ -860,9 +1041,7 @@ export default function BuildGiftClient({
 
 
     function goTo(index: number) {
-        if (index < 0 || index > STEPS.length || index === stepIndex) return;
-
-        setVisitHistory((history) => [...history, stepIndex]);
+        if (index < 0 || index > STEPS.length) return;
         setStepIndex(index);
         setAdded(false);
 
@@ -886,38 +1065,8 @@ export default function BuildGiftClient({
         if (stepIndex < STEPS.length - 1) {
             goTo(stepIndex + 1);
         } else if (canAccessReview) {
-            goTo(STEPS.length);
+            proceedToCheckout();
         }
-    }
-    function buildGiftCheckoutItems(validItems: (ResolvedGiftItem & { product: ProductView })[]): GiftCheckoutItem[] {
-        return validItems.map((item) => {
-            const categoryLabel = item.stepConfig.label;
-            const optionLabel = item.options?.label;
-            const variantLabel = optionLabel
-                ? `[Gift Box · ${categoryLabel}] ${optionLabel}`
-                : `[Gift Box · ${categoryLabel}]`;
-            const selectedOptions: Record<string, string> = {
-                ...(item.options?.options || {}),
-                "Gift Category": categoryLabel,
-                "Gift Packaging": "Festive Gift Box & Handwritten Card",
-            };
-            return {
-                productSlug: item.product.slug,
-                title: item.product.title,
-                unitPrice: item.product.price,
-                priceLabel: item.product.priceLabel,
-                quantity: 1,
-                image: item.product.image,
-                shortDescription: item.product.shortDescription,
-                variantLabel,
-                selectedOptions,
-                categoryName: categoryLabel,
-                weightGrams: item.product.weightGrams,
-                lengthCm: item.product.lengthCm,
-                breadthCm: item.product.breadthCm,
-                heightCm: item.product.heightCm,
-            };
-        });
     }
     async function addToBag() {
         if (!canAccessReview) return;
@@ -930,23 +1079,22 @@ export default function BuildGiftClient({
                 throw new Error(`Minimum ${minProducts} products required for a gift.`);
             }
             const checkoutItems = buildGiftCheckoutItems(validItems);
-            for (const item of checkoutItems) {
-                addToCart(
-                    {
-                        productSlug: item.productSlug,
-                        title: item.title,
-                        unitPrice: item.unitPrice,
-                        priceLabel: item.priceLabel,
-                        quantity: 1,
-                        image: item.image,
-                        shortDescription: item.shortDescription,
-                        variantLabel: item.variantLabel,
-                        selectedOptions: item.selectedOptions,
-                    },
-                    { openDrawer: false },
-                );
-            }
-            clearStoredGiftItems();
+            const cartPayloads = checkoutItems.map((item) => ({
+                productSlug: item.productSlug,
+                title: item.title,
+                unitPrice: item.unitPrice,
+                priceLabel: item.priceLabel,
+                quantity: 1,
+                image: item.image,
+                shortDescription: item.shortDescription,
+                variantLabel: item.variantLabel,
+                selectedOptions: item.selectedOptions,
+                weightGrams: item.weightGrams,
+                lengthCm: item.lengthCm,
+                breadthCm: item.breadthCm,
+                heightCm: item.heightCm,
+            }));
+            syncGiftBundleToCart(cartPayloads);
             setAdded(true);
             openCart();
         } catch (error) {
@@ -984,25 +1132,24 @@ export default function BuildGiftClient({
                     window.localStorage.removeItem("seijaku-checkout-options");
                 } catch { }
             }
-            // 3. Sync to cart as well with gift labels
-            for (const item of checkoutItems) {
-                addToCart(
-                    {
-                        productSlug: item.productSlug,
-                        title: item.title,
-                        unitPrice: item.unitPrice,
-                        priceLabel: item.priceLabel,
-                        quantity: 1,
-                        image: item.image,
-                        shortDescription: item.shortDescription,
-                        variantLabel: item.variantLabel,
-                        selectedOptions: item.selectedOptions,
-                    },
-                    { openDrawer: false },
-                );
-            }
-            // 4. Keep builder draft preserved so navigating back to /build-gift maintains all selections
-            // 5. Navigate to checkout with gift query parameter
+            // 3. Ensure cart has the exact current gift bundle
+            const cartPayloads = checkoutItems.map((item) => ({
+                productSlug: item.productSlug,
+                title: item.title,
+                unitPrice: item.unitPrice,
+                priceLabel: item.priceLabel,
+                quantity: 1,
+                image: item.image,
+                shortDescription: item.shortDescription,
+                variantLabel: item.variantLabel,
+                selectedOptions: item.selectedOptions,
+                weightGrams: item.weightGrams,
+                lengthCm: item.lengthCm,
+                breadthCm: item.breadthCm,
+                heightCm: item.heightCm,
+            }));
+            syncGiftBundleToCart(cartPayloads);
+            // 4. Navigate to checkout with gift query parameter
             router.push("/checkout?gift=true");
         } catch (error) {
             console.error("Failed to proceed to checkout.", error);
@@ -1022,12 +1169,10 @@ export default function BuildGiftClient({
                     <span className="font-sans text-[11px] tracking-[0.08em] text-[#8D7B69]">
                         Build Your Gift
                     </span>
-
                     <Stepper
                         current={stepIndex}
                         isFull={selectedCount >= maxProducts}
                         countsByStep={countsByStep}
-                        canAccessReview={canAccessReview}
                         onGo={goTo}
                     />
                     <span className="hidden font-serif text-[12px] italic text-[#9A8574] 2xl:block">
@@ -1122,7 +1267,7 @@ export default function BuildGiftClient({
                             </div>
                         </div>
 
-                        {/* Right: existing summary with its original actions */}
+                        {/* Right: existing summary with Proceed to Checkout */}
                         <GiftSidebar
                             items={resolvedGiftItems}
                             currentStepIndex={stepIndex}
@@ -1130,17 +1275,11 @@ export default function BuildGiftClient({
                             minProducts={minProducts}
                             maxProducts={maxProducts}
                             total={total}
+                            isSubmitting={isSubmitting}
                             onContinue={continueToNextStep}
                             onGoToStep={goTo}
                             onRemoveItem={removeItemByInstanceId}
                             onProceedToReview={() => goTo(STEPS.length)}
-                            //  next prev
-                            previousVisitedStepIndex={
-                                visitHistory.length > 0
-                                    ? visitHistory[visitHistory.length - 1]
-                                    : null
-                            }
-                            onGoBack={goBackToPreviousVisit}
                         />
                     </div>
                 )}
